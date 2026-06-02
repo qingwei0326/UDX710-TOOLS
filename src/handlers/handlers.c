@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 /* GET /api/info - 获取系统信息 */
 void handle_info(struct mg_connection *c, struct mg_http_message *hm) {
@@ -899,27 +900,24 @@ void handle_update_install(struct mg_connection *c,
                            struct mg_http_message *hm) {
   HTTP_CHECK_POST(c, hm);
 
-  char output[2048] = {0};
+  /* 先返回成功响应，再 fork 子进程执行安装 */
+  JsonBuilder *j = json_new();
+  json_obj_open(j);
+  json_add_str(j, "status", "success");
+  json_add_str(j, "message", "安装成功，正在重启...");
+  json_obj_close(j);
+  HTTP_OK_FREE(c, json_finish(j));
 
-  if (update_install(output, sizeof(output)) == 0) {
-    JsonBuilder *j = json_new();
-    json_obj_open(j);
-    json_add_str(j, "status", "success");
-    json_add_str(j, "message", "安装成功，正在重启...");
-    json_add_str(j, "output", output);
-    json_obj_close(j);
-    HTTP_OK_FREE(c, json_finish(j));
-    c->is_draining = 1;
+  /* fork 子进程执行安装，父进程继续处理 HTTP 响应 */
+  pid_t pid = fork();
+  if (pid == 0) {
+    /* 子进程：等响应发完后执行安装 */
     sleep(2);
-    device_reboot();
-  } else {
-    JsonBuilder *j = json_new();
-    json_obj_open(j);
-    json_add_str(j, "error", "安装失败");
-    json_add_str(j, "output", output);
-    json_obj_close(j);
-    HTTP_JSON_FREE(c, 500, json_finish(j));
+    char output[2048] = {0};
+    update_install(output, sizeof(output));
+    _exit(0);
   }
+  /* 父进程正常返回 */
 }
 
 /* GET /api/update/check - 检查远程版本 */
