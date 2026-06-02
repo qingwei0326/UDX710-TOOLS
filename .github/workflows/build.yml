@@ -68,10 +68,14 @@ jobs:
           killall server 2>/dev/null
           cp -f /tmp/update/server ./server
           cp -rf /tmp/update/dist/* ./dist/
+          if [ -f /tmp/update/version ]; then
+            cp -f /tmp/update/version ./version
+          fi
           chmod 755 server
           ./server &
           EOF
           cp install.sh output/6677/
+          echo "2.3.5" > output/6677/version
           cd output/6677
           zip -r ../../update.zip .
 

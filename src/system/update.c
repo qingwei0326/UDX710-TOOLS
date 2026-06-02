@@ -13,8 +13,31 @@
 #include "exec_utils.h"
 #include "mongoose.h"
 
-/* 获取当前版本 */
+/* 获取当前版本 - 优先从文件读取，回退到编译时常量 */
 const char* update_get_version(void) {
+    static char file_version[32] = {0};
+    /* 版本文件路径: 与server同目录的version文件 */
+    const char *version_paths[] = {
+        "./version",
+        "/home/root/6677/version",
+        NULL
+    };
+    for (int i = 0; version_paths[i]; i++) {
+        FILE *f = fopen(version_paths[i], "r");
+        if (f) {
+            if (fgets(file_version, sizeof(file_version), f)) {
+                /* 去除换行符 */
+                size_t len = strlen(file_version);
+                while (len > 0 && (file_version[len-1] == '\n' || file_version[len-1] == '\r'))
+                    file_version[--len] = '\0';
+                if (len > 0) {
+                    fclose(f);
+                    return file_version;
+                }
+            }
+            fclose(f);
+        }
+    }
     return FIRMWARE_VERSION;
 }
 
