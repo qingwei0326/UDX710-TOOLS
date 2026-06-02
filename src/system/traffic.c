@@ -25,10 +25,6 @@
 static int is_flow_control_running = 0;
 static pthread_t flow_control_thread;
 
-/* 前向声明 */
-static int get_current_month(void);
-static void check_monthly_reset(void);
-
 /* 流量配置 */
 typedef struct {
     long long much;
@@ -79,13 +75,35 @@ static void format_bytes(long long bytes, char *buf, size_t size) {
     snprintf(buf, size, "%.3f %s", value, units[idx]);
 }
 
+/* 检查是否需要月度清空 */
+static void check_monthly_reset(void) {
+    time_t now = time(NULL);
+    struct tm *t = localtime(&now);
+    int current_month = (t->tm_year + 1900) * 100 + (t->tm_mon + 1);
+    int last_month = config_get_int("traffic_last_reset_month", 0);
+
+    if (last_month == 0) {
+        /* 首次运行，记录当前月份 */
+        config_set_int("traffic_last_reset_month", current_month);
+        return;
+    }
+
+    if (current_month != last_month) {
+        printf("流量统计: 检测到跨月 (%d -> %d)，自动清空统计\n", last_month, current_month);
+        char output[256];
+        run_command(output, sizeof(output), "rm", "-f", VNSTAT_DB, NULL);
+        init_vnstat_db();
+        config_set_int("traffic_last_reset_month", current_month);
+    }
+}
+
 /* 流量控制线程 */
 static void *flow_control_thread_func(void *arg) {
     (void)arg;
     int tick = 0;
     while (1) {
-        /* 每小时检查一次跨月 */
-        if (++tick >= 240) {
+        /* 每分钟检查一次（每4轮15秒） */
+        if (++tick >= 4) {
             tick = 0;
             check_monthly_reset();
         }
@@ -109,34 +127,6 @@ static void *flow_control_thread_func(void *arg) {
         sleep(15);
     }
     return NULL;
-}
-
-/* 获取当前月份 YYYYMM */
-static int get_current_month(void) {
-    time_t now = time(NULL);
-    struct tm *t = localtime(&now);
-    return (t->tm_year + 1900) * 100 + (t->tm_mon + 1);
-}
-
-/* 检查跨月并自动清空流量统计 */
-static void check_monthly_reset(void) {
-    int current = get_current_month();
-    int last = config_get_int("traffic_last_reset_month", 0);
-
-    if (last == 0) {
-        /* 首次运行，记录当前月份 */
-        config_set_int("traffic_last_reset_month", current);
-        return;
-    }
-
-    if (current != last) {
-        /* 跨月了，清空 vnstat 数据库 */
-        printf("流量统计: 检测到跨月 (%d -> %d)，自动清空统计\n", last, current);
-        char output[256];
-        run_command(output, sizeof(output), "rm", "-f", VNSTAT_DB, NULL);
-        init_vnstat_db();
-        config_set_int("traffic_last_reset_month", current);
-    }
 }
 
 /* 初始化 vnstat 数据库 */
