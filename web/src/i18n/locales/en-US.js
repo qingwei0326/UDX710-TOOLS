@@ -1135,7 +1135,8 @@ export default {
     localIp: 'Local IP',
     localPort: 'Local Port',
     remotePort: 'Remote Port',
-    noServices: 'No tunnels configured'
+    noServices: 'No tunnels configured',
+    frpcSubtitle: 'Expose local services via Sakura Frp free relay',
   },
 
   // IPv6 Port Forwarding

@@ -283,7 +283,7 @@ onUnmounted(() => {
         </div>
         <div>
           <h3 class="text-slate-900 dark:text-white font-semibold text-sm sm:text-base">Sakura Frp</h3>
-          <p class="text-slate-500 dark:text-white/50 text-xs sm:text-sm">{{ t('rathole.subtitle') }}</p>
+          <p class="text-slate-500 dark:text-white/50 text-xs sm:text-sm">{{ t('rathole.frpcSubtitle') }}</p>
         </div>
       </div>
 

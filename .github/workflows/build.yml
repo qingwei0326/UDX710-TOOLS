@@ -61,6 +61,15 @@ jobs:
           cp -r web/dist output/6677/
           cp src/build/ofono-server output/6677/server
 
+      - name: Download frpc (aarch64)
+        run: |
+          FRP_VERSION="0.61.1"
+          curl -sL "https://github.com/fatedier/frp/releases/download/v${FRP_VERSION}/frp_${FRP_VERSION}_linux_arm64.tar.gz" -o frp.tar.gz
+          tar xzf frp.tar.gz
+          cp frp_${FRP_VERSION}_linux_arm64/frpc output/6677/
+          chmod 755 output/6677/frpc
+          rm -rf frp_*
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:

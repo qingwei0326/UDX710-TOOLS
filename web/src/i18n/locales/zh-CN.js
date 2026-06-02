@@ -1150,7 +1150,8 @@
     localIp: '本地IP',
     localPort: '本地端口',
     remotePort: '远端端口',
-    noServices: '暂无隧道配置'
+    noServices: '暂无隧道配置',
+    frpcSubtitle: '通过 Sakura Frp 免费穿透服务暴露内网',
   },
 
   // IPv6端口转发
