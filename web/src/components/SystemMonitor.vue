@@ -14,9 +14,10 @@ const loading = inject('loading')
 const clearingCache = ref(false)
 const deviceType = localStorage.getItem('device_type') || 'battery'
 
-// IMEI/ICCID 显示控制
+// IMEI/ICCID/手机号 显示控制
 const showImei = ref(false)
 const showIccid = ref(false)
+const showPhone = ref(false)
 
 // 数据脱敏函数
 function maskValue(value, showFull) {
@@ -496,6 +497,13 @@ async function handleClearCache() {
               <div class="flex items-center space-x-2">
                 <span class="text-slate-900 dark:text-white font-mono text-sm transition-all duration-300">{{ maskValue(systemInfo?.iccid, showIccid) }}</span>
                 <font-awesome-icon :icon="showIccid ? 'eye' : 'eye-slash'" :class="showIccid ? 'text-green-400' : 'text-slate-400'" class="text-xs transition-all duration-300" />
+              </div>
+            </div>
+            <div @click="showPhone = !showPhone" class="group p-3 bg-slate-100 dark:bg-white/5 rounded-xl hover:bg-slate-200 dark:hover:bg-white/10 transition-all flex justify-between items-center cursor-pointer select-none">
+              <span class="text-slate-600 dark:text-white/60 text-sm"><i class="fas fa-phone mr-2 text-orange-400"></i>{{ t('monitor.phoneNumber') }}</span>
+              <div class="flex items-center space-x-2">
+                <span class="text-slate-900 dark:text-white font-mono text-sm transition-all duration-300">{{ maskValue(systemInfo?.phone_number, showPhone) }}</span>
+                <font-awesome-icon :icon="showPhone ? 'eye' : 'eye-slash'" :class="showPhone ? 'text-orange-400' : 'text-slate-400'" class="text-xs transition-all duration-300" />
               </div>
             </div>
           </div>

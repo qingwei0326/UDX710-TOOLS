@@ -57,6 +57,7 @@ void handle_info(struct mg_connection *c, struct mg_http_message *hm) {
   json_add_str(j, "imei", info.imei);
   json_add_str(j, "iccid", info.iccid);
   json_add_str(j, "imsi", info.imsi);
+  json_add_str(j, "phone_number", info.phone_number);
   json_add_str(j, "carrier", info.carrier);
   json_add_str(j, "network_type", info.network_type);
   json_add_str(j, "network_band", info.network_band);

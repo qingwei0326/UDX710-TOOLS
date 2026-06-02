@@ -115,6 +115,7 @@
     signedRate: '签约速率',
     imei: 'IMEI',
     iccid: 'ICCID',
+    phoneNumber: '手机号',
     systemStatus: '系统状态',
     power: '电源',
     batteryHealth: '电池健康',

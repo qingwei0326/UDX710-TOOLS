@@ -39,6 +39,7 @@ typedef struct {
     char imei[20];
     char iccid[24];
     char imsi[20];
+    char phone_number[32];
     char carrier[32];
     char network_type[16];
     char network_band[16];

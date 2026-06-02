@@ -222,6 +222,33 @@ int get_system_info(SystemInfo *info) {
         strncpy(info->carrier, carrier, sizeof(info->carrier) - 1);
     }
 
+    /* 手机号 - 通过 AT+CNUM 获取 */
+    {
+        char *cnum_result = NULL;
+        if (execute_at("AT+CNUM", &cnum_result) == 0 && cnum_result) {
+            /* 格式: +CNUM: "","13800138000",145 或 +CNUM: "","+8613800138000",145 */
+            char *p = strstr(cnum_result, "+CNUM:");
+            if (p) {
+                p = strchr(p, ',');
+                if (p) {
+                    p++; /* 跳过逗号 */
+                    if (*p == '"') {
+                        p++; /* 跳过开头引号 */
+                        char *end = strchr(p, '"');
+                        if (end) {
+                            size_t len = end - p;
+                            if (len > 0 && len < sizeof(info->phone_number)) {
+                                strncpy(info->phone_number, p, len);
+                                info->phone_number[len] = '\0';
+                            }
+                        }
+                    }
+                }
+            }
+            g_free(cnum_result);
+        }
+    }
+
     /* 飞行模式 */
     int airplane = get_airplane_mode();
     info->airplane_mode = (airplane == 1) ? 1 : 0;

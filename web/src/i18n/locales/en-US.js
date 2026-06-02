@@ -115,6 +115,7 @@ export default {
     signedRate: 'Signed Rate',
     imei: 'IMEI',
     iccid: 'ICCID',
+    phoneNumber: 'Phone Number',
     systemStatus: 'System Status',
     power: 'Power',
     batteryHealth: 'Battery Health',
