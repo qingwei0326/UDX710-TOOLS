@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <sys/stat.h>
+#include <time.h>
 #include <glib.h>
 #include "mongoose.h"
 #include "traffic.h"
@@ -23,6 +24,10 @@
 
 static int is_flow_control_running = 0;
 static pthread_t flow_control_thread;
+
+/* 前向声明 */
+static int get_current_month(void);
+static void check_monthly_reset(void);
 
 /* 流量配置 */
 typedef struct {
@@ -77,7 +82,13 @@ static void format_bytes(long long bytes, char *buf, size_t size) {
 /* 流量控制线程 */
 static void *flow_control_thread_func(void *arg) {
     (void)arg;
+    int tick = 0;
     while (1) {
+        /* 每小时检查一次跨月 */
+        if (++tick >= 240) {
+            tick = 0;
+            check_monthly_reset();
+        }
         TrafficConfig config = read_traffic_config();
         if (config.switch_on == 0) {
             /* 关闭流量控制时，关闭飞行模式恢复网络 */
@@ -100,6 +111,34 @@ static void *flow_control_thread_func(void *arg) {
     return NULL;
 }
 
+/* 获取当前月份 YYYYMM */
+static int get_current_month(void) {
+    time_t now = time(NULL);
+    struct tm *t = localtime(&now);
+    return (t->tm_year + 1900) * 100 + (t->tm_mon + 1);
+}
+
+/* 检查跨月并自动清空流量统计 */
+static void check_monthly_reset(void) {
+    int current = get_current_month();
+    int last = config_get_int("traffic_last_reset_month", 0);
+
+    if (last == 0) {
+        /* 首次运行，记录当前月份 */
+        config_set_int("traffic_last_reset_month", current);
+        return;
+    }
+
+    if (current != last) {
+        /* 跨月了，清空 vnstat 数据库 */
+        printf("流量统计: 检测到跨月 (%d -> %d)，自动清空统计\n", last, current);
+        char output[256];
+        run_command(output, sizeof(output), "rm", "-f", VNSTAT_DB, NULL);
+        init_vnstat_db();
+        config_set_int("traffic_last_reset_month", current);
+    }
+}
+
 /* 初始化 vnstat 数据库 */
 static void init_vnstat_db(void) {
     struct stat st;
@@ -116,6 +155,7 @@ static void init_vnstat_db(void) {
 /* 初始化流量统计 */
 void init_traffic(void) {
     init_vnstat_db();
+    check_monthly_reset();
 
     /* 启动流量控制 */
     TrafficConfig config = read_traffic_config();
