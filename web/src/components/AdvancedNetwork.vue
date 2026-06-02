@@ -292,7 +292,7 @@ onMounted(() => { fetchBands(); fetchCells() })
           <span class="px-2 py-0.5 bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400 text-[10px] rounded-full">{{ t('advanced.connected') }}</span>
         </div>
         <div class="p-3 bg-green-50 dark:bg-green-500/10 rounded-xl border border-green-200 dark:border-green-500/30">
-          <div class="grid grid-cols-4 sm:grid-cols-7 gap-3">
+          <div class="grid grid-cols-5 sm:grid-cols-7 gap-2 sm:gap-3">
             <div class="text-center">
               <p class="text-slate-500 dark:text-white/50 text-[10px]">{{ t('advanced.rat') }}</p>
               <p class="text-slate-900 dark:text-white font-semibold text-sm">{{ servingCell.rat }}</p>
@@ -313,7 +313,7 @@ onMounted(() => { fetchBands(); fetchCells() })
               <p class="text-slate-500 dark:text-white/50 text-[10px]">RSRP</p>
               <p :class="getSignalColor(servingCell.rsrp)" class="font-semibold text-sm">{{ servingCell.rsrp?.toFixed(0) }}</p>
             </div>
-            <div class="text-center hidden sm:block">
+            <div class="text-center">
               <p class="text-slate-500 dark:text-white/50 text-[10px]">RSRQ</p>
               <p class="text-cyan-600 dark:text-cyan-400 font-semibold text-sm">{{ servingCell.rsrq?.toFixed(1) }}</p>
             </div>
@@ -368,7 +368,7 @@ onMounted(() => { fetchBands(); fetchCells() })
                 <p class="text-slate-500 dark:text-white/50 text-[10px]">RSRP</p>
                 <p :class="getSignalColor(cell.rsrp)" class="text-xs">{{ cell.rsrp?.toFixed(0) }}</p>
               </div>
-              <div class="text-center hidden sm:block">
+              <div class="text-center">
                 <p class="text-slate-500 dark:text-white/50 text-[10px]">RSRQ</p>
                 <p class="text-cyan-600 dark:text-cyan-400 text-xs">{{ cell.rsrq?.toFixed(1) }}</p>
               </div>
