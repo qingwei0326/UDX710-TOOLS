@@ -31,19 +31,32 @@ const neighborCells = computed(() => cells.value.filter(c => !c.isServing))
 // 计算小区信号综合评分（用于推荐最佳小区）
 function calculateCellScore(cell) {
   // RSRP: -140 ~ -44 dBm, 越大越好
-  // RSRQ: -20 ~ -3 dB, 越大越好  
+  // RSRQ: -20 ~ -3 dB, 越大越好
   // SINR: -20 ~ 30 dB, 越大越好
+  // 注意: modem对不可用值返回0, 用 || 而非 ?? 来正确处理
   const rsrp = cell.rsrp || -140
   const rsrq = cell.rsrq || -20
   const sinr = cell.sinr || -20
-  
+
   // 归一化到 0-100
   const rsrpNorm = Math.max(0, Math.min(100, (rsrp + 140) / 96 * 100))
   const rsrqNorm = Math.max(0, Math.min(100, (rsrq + 20) / 17 * 100))
   const sinrNorm = Math.max(0, Math.min(100, (sinr + 20) / 50 * 100))
-  
+
   // 加权评分: RSRP 50%, RSRQ 25%, SINR 25%
   return rsrpNorm * 0.5 + rsrqNorm * 0.25 + sinrNorm * 0.25
+}
+
+// 获取评分详情（用于显示推荐原因）
+function getCellScoreDetail(cell) {
+  const rsrp = cell.rsrp || -140
+  const rsrq = cell.rsrq || -20
+  const sinr = cell.sinr || -20
+  const rsrpNorm = Math.max(0, Math.min(100, (rsrp + 140) / 96 * 100))
+  const rsrqNorm = Math.max(0, Math.min(100, (rsrq + 20) / 17 * 100))
+  const sinrNorm = Math.max(0, Math.min(100, (sinr + 20) / 50 * 100))
+  const score = calculateCellScore(cell)
+  return `RSRP:${rsrp.toFixed(1)}(${rsrpNorm.toFixed(0)})×50% + RSRQ:${rsrq.toFixed(1)}(${rsrqNorm.toFixed(0)})×25% + SINR:${sinr.toFixed(1)}(${sinrNorm.toFixed(0)})×25% = ${score.toFixed(1)}`
 }
 
 // 推荐的最佳邻区
@@ -329,12 +342,12 @@ onMounted(() => { fetchBands(); fetchCells() })
                 ? 'bg-slate-50 dark:bg-white/5 border-amber-400 dark:border-amber-500/50' 
                 : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 hover:border-cyan-300 dark:hover:border-cyan-500/50'">
             <!-- 推荐角标（仅邻区显示） -->
-            <div v-if="!cell.isServing && isRecommended(cell)" 
+            <div v-if="!cell.isServing && isRecommended(cell)"
               class="absolute left-0 top-0 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-br-lg"
-              :title="t('advanced.recommendReason')">
+              :title="getCellScoreDetail(cell)">
               <i class="fas fa-star mr-0.5"></i>{{ t('advanced.recommended') }}
             </div>
-            <div class="grid grid-cols-4 sm:grid-cols-6 gap-3 flex-1">
+            <div class="grid grid-cols-5 sm:grid-cols-7 gap-2 sm:gap-3 flex-1">
               <div class="text-center">
                 <p class="text-slate-500 dark:text-white/50 text-[10px]">{{ t('advanced.rat') }}</p>
                 <p class="text-slate-900 dark:text-white text-xs">{{ cell.rat }}</p>
@@ -354,6 +367,10 @@ onMounted(() => { fetchBands(); fetchCells() })
               <div class="text-center">
                 <p class="text-slate-500 dark:text-white/50 text-[10px]">RSRP</p>
                 <p :class="getSignalColor(cell.rsrp)" class="text-xs">{{ cell.rsrp?.toFixed(0) }}</p>
+              </div>
+              <div class="text-center hidden sm:block">
+                <p class="text-slate-500 dark:text-white/50 text-[10px]">RSRQ</p>
+                <p class="text-cyan-600 dark:text-cyan-400 text-xs">{{ cell.rsrq?.toFixed(1) }}</p>
               </div>
               <div class="text-center hidden sm:block">
                 <p class="text-slate-500 dark:text-white/50 text-[10px]">SINR</p>
