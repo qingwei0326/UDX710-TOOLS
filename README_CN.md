@@ -83,8 +83,9 @@
   - IPv6地址变化时Webhook通知
   - 支持开机自启动
   - 发送日志带响应追踪
-- **内网穿透（Rathole）**：内置Rathole客户端实现NAT穿透
-  - 多服务配置
+- **内网穿透**：双模式NAT穿透支持
+  - **Rathole**：自建服务器模式，多服务配置
+  - **Sakura Frp**：免费穿透服务，快捷预设（SSH/Web/RDP）
   - 自动生成服务端配置
   - 实时连接状态
   - 支持开机自启动
@@ -221,6 +222,10 @@ make
 | `/api/rathole/services` | GET/POST/DELETE | Rathole服务管理 |
 | `/api/rathole/status` | GET | Rathole连接状态 |
 | `/api/rathole/logs` | GET | Rathole日志 |
+| `/api/frpc/config` | GET/POST | Sakura Frp配置 |
+| `/api/frpc/proxies` | GET/POST/DELETE | Sakura Frp隧道管理 |
+| `/api/frpc/status` | GET | Sakura Frp连接状态 |
+| `/api/frpc/logs` | GET | Sakura Frp日志 |
 | `/api/update/check` | GET | 检查更新 |
 | `/api/update/install` | POST | 安装更新 |
 | `/api/factory-reset` | POST | 恢复出厂设置 |
