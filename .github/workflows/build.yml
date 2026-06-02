@@ -84,14 +84,12 @@ jobs:
           cat > install.sh << 'EOF'
           #!/bin/sh
           cd /home/root/6677
-          killall server 2>/dev/null
           cp -f /tmp/update/server ./server
           cp -rf /tmp/update/dist/* ./dist/
           if [ -f /tmp/update/version ]; then
             cp -f /tmp/update/version ./version
           fi
           chmod 755 server
-          ./server &
           EOF
           cp install.sh output/6677/
           echo "${{ steps.version.outputs.version }}" > output/6677/version
