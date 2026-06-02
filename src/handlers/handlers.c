@@ -2670,24 +2670,21 @@ void handle_frpc_config_set(struct mg_connection *c,
                             struct mg_http_message *hm) {
   HTTP_CHECK_POST(c, hm);
 
-  char server_addr[FRPC_ADDR_SIZE] = {0};
-  char token[FRPC_TOKEN_SIZE] = {0};
-  long server_port = 7000;
-  long auto_start = 0;
-  long enabled = 0;
+  char *server_addr = mg_json_get_str(hm->body, "$.server_addr");
+  char *token = mg_json_get_str(hm->body, "$.token");
+  long server_port = mg_json_get_long(hm->body, "$.server_port", 7000);
+  long auto_start = mg_json_get_long(hm->body, "$.auto_start", 0);
+  long enabled = mg_json_get_long(hm->body, "$.enabled", 0);
 
-  mg_json_get_str(hm->body, "$.server_addr", server_addr, sizeof(server_addr));
-  mg_json_get_str(hm->body, "$.token", token, sizeof(token));
-  server_port = mg_json_get_long(hm->body, "$.server_port", 7000);
-  auto_start = mg_json_get_long(hm->body, "$.auto_start", 0);
-  enabled = mg_json_get_long(hm->body, "$.enabled", 0);
-
-  if (frpc_set_config(server_addr, (int)server_port, token, (int)auto_start,
-                      (int)enabled) == 0) {
+  if (frpc_set_config(server_addr ? server_addr : "", (int)server_port,
+                      token ? token : "", (int)auto_start, (int)enabled) == 0) {
     HTTP_OK(c, "{\"status\":\"ok\",\"message\":\"配置保存成功\"}");
   } else {
     HTTP_ERROR(c, 500, "配置保存失败");
   }
+
+  if (server_addr) free(server_addr);
+  if (token) free(token);
 }
 
 /* GET /api/frpc/proxies - 获取隧道列表 */
@@ -2704,7 +2701,7 @@ void handle_frpc_proxies_list(struct mg_connection *c,
   }
 
   JsonBuilder *j = json_new();
-  json_arr_open(j);
+  json_arr_open(j, NULL);
   for (int i = 0; i < count; i++) {
     json_obj_open(j);
     json_add_int(j, "id", proxies[i].id);
@@ -2726,26 +2723,22 @@ void handle_frpc_proxy_add(struct mg_connection *c,
                            struct mg_http_message *hm) {
   HTTP_CHECK_POST(c, hm);
 
-  char name[FRPC_NAME_SIZE] = {0};
-  char type[FRPC_TYPE_SIZE] = "tcp";
-  char local_ip[FRPC_ADDR_SIZE] = "127.0.0.1";
-  long local_port = 0;
-  long remote_port = 0;
+  char *name = mg_json_get_str(hm->body, "$.name");
+  char *type = mg_json_get_str(hm->body, "$.type");
+  char *local_ip = mg_json_get_str(hm->body, "$.local_ip");
+  long local_port = mg_json_get_long(hm->body, "$.local_port", 0);
+  long remote_port = mg_json_get_long(hm->body, "$.remote_port", 0);
 
-  mg_json_get_str(hm->body, "$.name", name, sizeof(name));
-  mg_json_get_str(hm->body, "$.type", type, sizeof(type));
-  mg_json_get_str(hm->body, "$.local_ip", local_ip, sizeof(local_ip));
-  local_port = mg_json_get_long(hm->body, "$.local_port", 0);
-  remote_port = mg_json_get_long(hm->body, "$.remote_port", 0);
-
-  if (strlen(name) == 0 || local_port <= 0 || remote_port <= 0) {
+  if (!name || strlen(name) == 0 || local_port <= 0 || remote_port <= 0) {
+    if (name) free(name);
+    if (type) free(type);
+    if (local_ip) free(local_ip);
     HTTP_ERROR(c, 400, "参数不完整");
     return;
   }
 
-  if (frpc_proxy_add(name, type, local_ip, (int)local_port,
-                     (int)remote_port) == 0) {
-    /* 如果 frpc 正在运行，自动重启 */
+  if (frpc_proxy_add(name, type ? type : "tcp", local_ip ? local_ip : "127.0.0.1",
+                     (int)local_port, (int)remote_port) == 0) {
     if (frpc_get_status(NULL) == 1) {
       frpc_restart();
     }
@@ -2753,6 +2746,10 @@ void handle_frpc_proxy_add(struct mg_connection *c,
   } else {
     HTTP_ERROR(c, 500, "隧道添加失败（名称可能重复）");
   }
+
+  free(name);
+  if (type) free(type);
+  if (local_ip) free(local_ip);
 }
 
 /* PUT /api/frpc/proxies/:id - 更新隧道 */
@@ -2768,23 +2765,10 @@ void handle_frpc_proxy_update(struct mg_connection *c,
 
   /* 从 URI 中提取 ID */
   int id = 0;
-  char id_str[16] = {0};
-  if (mg_json_get_str(hm->uri, "$", id_str, sizeof(id_str)) == 0) {
-    char *p = strrchr(id_str, '/');
-    if (p) id = atoi(p + 1);
-  }
-  /* 备用: 直接从 URI 解析 */
-  if (id == 0) {
-    struct mg_str uri = hm->uri;
-    char *p = memchr(uri.buf, '/', uri.len);
-    while (p) {
-      char *next = memchr(p + 1, '/', uri.len - (p + 1 - uri.buf));
-      if (!next) {
-        id = atoi(p + 1);
-        break;
-      }
-      p = next;
-    }
+  struct mg_str uri = hm->uri;
+  char *last_slash = memrchr(uri.buf, '/', uri.len);
+  if (last_slash) {
+    id = atoi(last_slash + 1);
   }
 
   if (id <= 0) {
@@ -2792,21 +2776,15 @@ void handle_frpc_proxy_update(struct mg_connection *c,
     return;
   }
 
-  char name[FRPC_NAME_SIZE] = {0};
-  char type[FRPC_TYPE_SIZE] = "tcp";
-  char local_ip[FRPC_ADDR_SIZE] = "127.0.0.1";
-  long local_port = 0;
-  long remote_port = 0;
-  long enabled = 1;
+  char *name = mg_json_get_str(hm->body, "$.name");
+  char *type = mg_json_get_str(hm->body, "$.type");
+  char *local_ip = mg_json_get_str(hm->body, "$.local_ip");
+  long local_port = mg_json_get_long(hm->body, "$.local_port", 0);
+  long remote_port = mg_json_get_long(hm->body, "$.remote_port", 0);
+  long enabled = mg_json_get_long(hm->body, "$.enabled", 1);
 
-  mg_json_get_str(hm->body, "$.name", name, sizeof(name));
-  mg_json_get_str(hm->body, "$.type", type, sizeof(type));
-  mg_json_get_str(hm->body, "$.local_ip", local_ip, sizeof(local_ip));
-  local_port = mg_json_get_long(hm->body, "$.local_port", 0);
-  remote_port = mg_json_get_long(hm->body, "$.remote_port", 0);
-  enabled = mg_json_get_long(hm->body, "$.enabled", 1);
-
-  if (frpc_proxy_update(id, name, type, local_ip, (int)local_port,
+  if (frpc_proxy_update(id, name ? name : "", type ? type : "tcp",
+                        local_ip ? local_ip : "127.0.0.1", (int)local_port,
                         (int)remote_port, (int)enabled) == 0) {
     if (frpc_get_status(NULL) == 1) {
       frpc_restart();
@@ -2815,6 +2793,10 @@ void handle_frpc_proxy_update(struct mg_connection *c,
   } else {
     HTTP_ERROR(c, 500, "隧道更新失败");
   }
+
+  if (name) free(name);
+  if (type) free(type);
+  if (local_ip) free(local_ip);
 }
 
 /* DELETE /api/frpc/proxies/:id - 删除隧道 */
@@ -2893,7 +2875,13 @@ void handle_frpc_status(struct mg_connection *c, struct mg_http_message *hm) {
 void handle_frpc_logs(struct mg_connection *c, struct mg_http_message *hm) {
   HTTP_CHECK_GET(c, hm);
 
-  long lines = mg_json_get_long(hm->query_string, "lines", 100);
+  /* 从查询参数获取行数，默认100 */
+  char lines_str[16] = {0};
+  struct mg_str lines_param = mg_http_var(hm->query, mg_str("lines"));
+  if (lines_param.len > 0 && lines_param.len < sizeof(lines_str)) {
+    memcpy(lines_str, lines_param.buf, lines_param.len);
+  }
+  long lines = (strlen(lines_str) > 0) ? atoi(lines_str) : 100;
   if (lines > 1000) lines = 1000;
   if (lines < 1) lines = 100;
 
