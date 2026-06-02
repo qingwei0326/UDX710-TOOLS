@@ -15,6 +15,7 @@ const status = ref({ running: 0, pid: -1, proxy_count: 0 })
 const logs = ref('')
 const showDialog = ref(false)
 const isEditing = ref(false)
+const showGuide = ref(false)
 let statusTimer = null
 
 // 表单
@@ -410,9 +411,14 @@ onUnmounted(() => {
     <div class="rounded-2xl bg-white/95 dark:bg-white/5 backdrop-blur border border-slate-200/60 dark:border-white/10 p-4 sm:p-6 shadow-lg shadow-slate-200/40 dark:shadow-black/20">
       <div class="flex items-center justify-between mb-3">
         <h4 class="text-slate-900 dark:text-white font-semibold text-sm">{{ t('rathole.logs') }}</h4>
-        <button @click="fetchLogs" class="text-slate-400 dark:text-white/40 hover:text-slate-600 dark:hover:text-white/60 transition-all">
-          <i class="fas fa-sync-alt text-sm"></i>
-        </button>
+        <div class="flex items-center space-x-2">
+          <button @click="showGuide = true" class="text-slate-400 dark:text-white/40 hover:text-pink-500 transition-all" :title="t('rathole.guideTitle')">
+            <i class="fas fa-question-circle text-sm"></i>
+          </button>
+          <button @click="fetchLogs" class="text-slate-400 dark:text-white/40 hover:text-slate-600 dark:hover:text-white/60 transition-all">
+            <i class="fas fa-sync-alt text-sm"></i>
+          </button>
+        </div>
       </div>
       <div class="bg-slate-900 dark:bg-black/50 rounded-xl p-3 max-h-48 overflow-y-auto font-mono text-xs text-green-400 whitespace-pre-wrap">{{ logs || 'No logs...' }}</div>
     </div>
@@ -466,6 +472,75 @@ onUnmounted(() => {
           </div>
         </div>
       </Transition>
+    </Teleport>
+    <!-- 使用指南弹窗 -->
+    <Teleport to="body">
+      <div v-show="showGuide" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="showGuide = false"></div>
+        <div class="relative w-full max-w-2xl max-h-[80vh] bg-white dark:bg-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+          <div class="px-6 py-4 bg-pink-500 text-white flex items-center justify-between">
+            <h3 class="font-semibold">Sakura Frp {{ t('rathole.guideTitle') }}</h3>
+            <button @click="showGuide = false" class="w-8 h-8 rounded-lg hover:bg-white/20 flex items-center justify-center">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          <div class="p-6 overflow-y-auto space-y-4 text-slate-700 dark:text-white/80 text-sm">
+
+            <!-- 简介 -->
+            <h4 class="text-lg font-semibold text-slate-900 dark:text-white">{{ t('rathole.frpcGuideIntro') }}</h4>
+            <p>{{ t('rathole.frpcGuideIntroDesc') }}</p>
+            <div class="bg-pink-50 dark:bg-pink-500/10 border border-pink-200 dark:border-pink-500/20 rounded-xl p-4">
+              <p class="text-pink-700 dark:text-pink-300">💡 {{ t('rathole.frpcGuideAdvantage') }}</p>
+            </div>
+
+            <!-- 步骤1: 注册 -->
+            <h4 class="text-lg font-semibold text-slate-900 dark:text-white pt-2">Step 1: {{ t('rathole.frpcGuideStep1') }}</h4>
+            <ol class="text-sm space-y-1 pl-4 list-decimal">
+              <li>{{ t('rathole.frpcGuideStep1a') }}</li>
+              <li>{{ t('rathole.frpcGuideStep1b') }}</li>
+              <li>{{ t('rathole.frpcGuideStep1c') }}</li>
+            </ol>
+            <a href="https://www.xfrp.net/" target="_blank" class="inline-flex items-center px-4 py-2 bg-pink-100 dark:bg-pink-500/20 rounded-xl text-pink-600 dark:text-pink-400 text-sm hover:bg-pink-200 dark:hover:bg-pink-500/30">
+              <i class="fas fa-external-link-alt mr-2"></i>{{ t('rathole.registerAccount') }}
+            </a>
+
+            <!-- 步骤2: 获取Token -->
+            <h4 class="text-lg font-semibold text-slate-900 dark:text-white pt-2">Step 2: {{ t('rathole.frpcGuideStep2') }}</h4>
+            <ol class="text-sm space-y-1 pl-4 list-decimal">
+              <li>{{ t('rathole.frpcGuideStep2a') }}</li>
+              <li>{{ t('rathole.frpcGuideStep2b') }}</li>
+              <li>{{ t('rathole.frpcGuideStep2c') }}</li>
+            </ol>
+            <div class="bg-slate-100 dark:bg-white/5 rounded-xl p-4 text-xs">
+              <p class="font-medium mb-1">{{ t('rathole.frpcGuideStep2Note') }}</p>
+              <code class="bg-slate-200 dark:bg-white/10 px-2 py-1 rounded">https://api.xfrp.net/api/v2/passport/token</code>
+            </div>
+
+            <!-- 步骤3: 配置 -->
+            <h4 class="text-lg font-semibold text-slate-900 dark:text-white pt-2">Step 3: {{ t('rathole.frpcGuideStep3') }}</h4>
+            <ol class="text-sm space-y-1 pl-4 list-decimal">
+              <li>{{ t('rathole.frpcGuideStep3a') }}</li>
+              <li>{{ t('rathole.frpcGuideStep3b') }}</li>
+              <li>{{ t('rathole.frpcGuideStep3c') }}</li>
+              <li>{{ t('rathole.frpcGuideStep3d') }}</li>
+            </ol>
+
+            <!-- 步骤4: 连接 -->
+            <h4 class="text-lg font-semibold text-slate-900 dark:text-white pt-2">Step 4: {{ t('rathole.frpcGuideStep4') }}</h4>
+            <p>{{ t('rathole.frpcGuideStep4Desc') }}</p>
+
+            <!-- 注意事项 -->
+            <div class="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl p-4 space-y-2 text-sm">
+              <p class="font-medium text-amber-700 dark:text-amber-300">{{ t('rathole.frpcGuideWarning') }}</p>
+              <ul class="space-y-1 pl-4 text-amber-600 dark:text-amber-400">
+                <li>• {{ t('rathole.frpcGuideWarning1') }}</li>
+                <li>• {{ t('rathole.frpcGuideWarning2') }}</li>
+                <li>• {{ t('rathole.frpcGuideWarning3') }}</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
     </Teleport>
   </div>
 </template>
