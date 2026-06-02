@@ -102,8 +102,8 @@ static void *flow_control_thread_func(void *arg) {
     (void)arg;
     int tick = 0;
     while (1) {
-        /* 每分钟检查一次（每4轮15秒） */
-        if (++tick >= 4) {
+        /* 每小时检查一次（每240轮15秒） */
+        if (++tick >= 240) {
             tick = 0;
             check_monthly_reset();
         }
