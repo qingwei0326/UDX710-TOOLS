@@ -41,6 +41,7 @@ jobs:
       - name: build server
         run: |
           cd src
+          make clean
           make
 
       - name: dopack
