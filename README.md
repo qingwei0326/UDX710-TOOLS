@@ -85,8 +85,9 @@ Lightweight, efficient, and perfect for resource-constrained embedded devices!
   - Webhook notification for IPv6 address changes
   - Auto-start on boot support
   - Send logs with response tracking
-- **Intranet Penetration (Rathole)**: Built-in Rathole client for NAT traversal
-  - Multi-service configuration
+- **Intranet Penetration**: Dual-mode NAT traversal support
+  - **Rathole**: Self-hosted server mode with multi-service configuration
+  - **Sakura Frp**: Free relay service with quick presets (SSH/Web/RDP)
   - Auto-generate server config
   - Real-time connection status
   - Auto-start on boot support
@@ -223,6 +224,10 @@ The backend uses cross-compilation targeting aarch64-linux-gnu. Ensure your tool
 | `/api/rathole/services` | GET/POST/DELETE | Rathole service management |
 | `/api/rathole/status` | GET | Rathole connection status |
 | `/api/rathole/logs` | GET | Rathole logs |
+| `/api/frpc/config` | GET/POST | Sakura Frp configuration |
+| `/api/frpc/proxies` | GET/POST/DELETE | Sakura Frp tunnel management |
+| `/api/frpc/status` | GET | Sakura Frp connection status |
+| `/api/frpc/logs` | GET | Sakura Frp logs |
 | `/api/update/check` | GET | Check for updates |
 | `/api/update/install` | POST | Install update |
 | `/api/factory-reset` | POST | Factory reset |
