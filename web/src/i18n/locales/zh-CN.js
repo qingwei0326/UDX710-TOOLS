@@ -1137,7 +1137,20 @@
     exportConfig: '导出服务端配置',
     serverConfigTitle: '服务端配置文件',
     serverConfigDesc: '将以下内容保存为 server.toml 文件，上传到公网服务器上：',
-    configCopied: '配置已复制到剪贴板'
+    configCopied: '配置已复制到剪贴板',
+
+    // Sakura Frp 相关
+    selfHosted: '(自建)',
+    freeService: '(免费穿透)',
+    serverPort: '服务器端口',
+    registerAccount: '注册樱花账号',
+    quickPresets: '快捷预设:',
+    activeServices: '个活跃隧道',
+    serviceType: '类型',
+    localIp: '本地IP',
+    localPort: '本地端口',
+    remotePort: '远端端口',
+    noServices: '暂无隧道配置'
   },
 
   // IPv6端口转发

@@ -1122,7 +1122,20 @@ export default {
     exportConfig: 'Export Server Config',
     serverConfigTitle: 'Server Configuration File',
     serverConfigDesc: 'Save the following content as server.toml and upload it to your public server:',
-    configCopied: 'Configuration copied to clipboard'
+    configCopied: 'Configuration copied to clipboard',
+
+    // Sakura Frp
+    selfHosted: '(Self-hosted)',
+    freeService: '(Free relay)',
+    serverPort: 'Server Port',
+    registerAccount: 'Register Sakura Account',
+    quickPresets: 'Quick presets:',
+    activeServices: 'active tunnels',
+    serviceType: 'Type',
+    localIp: 'Local IP',
+    localPort: 'Local Port',
+    remotePort: 'Remote Port',
+    noServices: 'No tunnels configured'
   },
 
   // IPv6 Port Forwarding

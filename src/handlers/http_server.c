@@ -18,6 +18,7 @@
 #include "system/ipv6_proxy.h"
 #include "system/phone_case.h"
 #include "system/rathole.h"
+#include "system/frpc.h"
 #include "system/security.h"
 #include "traffic.h"
 #include "usb_mode.h"
@@ -398,6 +399,36 @@ static void http_handler(struct mg_connection *c, int ev, void *ev_data) {
     } else if (mg_match(hm->uri, mg_str("/api/rathole/autostart"), NULL)) {
       handle_rathole_autostart(c, hm);
     }
+    /* Sakura Frp (frpc) 内网穿透 API */
+    else if (mg_match(hm->uri, mg_str("/api/frpc/config"), NULL)) {
+      if (hm->method.len == 3 && memcmp(hm->method.buf, "GET", 3) == 0) {
+        handle_frpc_config_get(c, hm);
+      } else {
+        handle_frpc_config_set(c, hm);
+      }
+    } else if (mg_match(hm->uri, mg_str("/api/frpc/proxies"), NULL)) {
+      if (hm->method.len == 3 && memcmp(hm->method.buf, "GET", 3) == 0) {
+        handle_frpc_proxies_list(c, hm);
+      } else {
+        handle_frpc_proxy_add(c, hm);
+      }
+    } else if (mg_match(hm->uri, mg_str("/api/frpc/proxies/*"), NULL)) {
+      if (hm->method.len == 3 && memcmp(hm->method.buf, "PUT", 3) == 0) {
+        handle_frpc_proxy_update(c, hm);
+      } else {
+        handle_frpc_proxy_delete(c, hm);
+      }
+    } else if (mg_match(hm->uri, mg_str("/api/frpc/start"), NULL)) {
+      handle_frpc_start(c, hm);
+    } else if (mg_match(hm->uri, mg_str("/api/frpc/stop"), NULL)) {
+      handle_frpc_stop(c, hm);
+    } else if (mg_match(hm->uri, mg_str("/api/frpc/status"), NULL)) {
+      handle_frpc_status(c, hm);
+    } else if (mg_match(hm->uri, mg_str("/api/frpc/logs"), NULL)) {
+      handle_frpc_logs(c, hm);
+    } else if (mg_match(hm->uri, mg_str("/api/frpc/autostart"), NULL)) {
+      handle_frpc_autostart(c, hm);
+    }
     /* IPv6 Proxy 端口转发 API */
     else if (mg_match(hm->uri, mg_str("/api/ipv6-proxy/config"), NULL)) {
       if (hm->method.len == 3 && memcmp(hm->method.buf, "GET", 3) == 0) {
@@ -490,6 +521,11 @@ int http_server_start(const char *port) {
   /* 初始化Rathole模块 */
   if (rathole_init("6677.db") != 0) {
     printf("警告: Rathole模块初始化失败\n");
+  }
+
+  /* 初始化Sakura Frp (frpc)模块 */
+  if (frpc_init("6677.db") != 0) {
+    printf("警告: Frpc模块初始化失败\n");
   }
 
   /* 初始化手机壳模式模块 */

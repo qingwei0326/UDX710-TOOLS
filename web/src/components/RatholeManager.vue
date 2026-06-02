@@ -3,10 +3,19 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from '../composables/useToast'
 import { useConfirm } from '../composables/useConfirm'
+import FrpcManager from './FrpcManager.vue'
 
 const { t } = useI18n()
 const { success, error } = useToast()
 const { confirm } = useConfirm()
+
+// 方案选择: 'rathole' | 'frpc'
+const provider = ref(localStorage.getItem('tunnel_provider') || 'rathole')
+
+function setProvider(p) {
+  provider.value = p
+  localStorage.setItem('tunnel_provider', p)
+}
 
 // 状态
 const loading = ref(false)
@@ -544,6 +553,26 @@ onUnmounted(() => {
 
 <template>
   <div class="space-y-6">
+    <!-- 方案选择 Tab -->
+    <div class="flex p-1 bg-slate-100 dark:bg-white/10 rounded-xl">
+      <button @click="setProvider('rathole')"
+        class="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center space-x-2"
+        :class="provider === 'rathole' ? 'bg-white dark:bg-white/20 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-slate-500 dark:text-white/50 hover:text-slate-700 dark:hover:text-white/70'">
+        <i class="fas fa-shield-alt"></i>
+        <span>Rathole</span>
+        <span class="text-xs opacity-60 hidden sm:inline">{{ t('rathole.selfHosted') || '(自建)' }}</span>
+      </button>
+      <button @click="setProvider('frpc')"
+        class="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center space-x-2"
+        :class="provider === 'frpc' ? 'bg-white dark:bg-white/20 text-pink-600 dark:text-pink-400 shadow-sm' : 'text-slate-500 dark:text-white/50 hover:text-slate-700 dark:hover:text-white/70'">
+        <i class="fas fa-wifi"></i>
+        <span>Sakura Frp</span>
+        <span class="text-xs opacity-60 hidden sm:inline">{{ t('rathole.freeService') || '(免费穿透)' }}</span>
+      </button>
+    </div>
+
+    <!-- Rathole 内容 -->
+    <template v-if="provider === 'rathole'">
     <!-- 服务器配置 -->
     <div class="bg-white/95 dark:bg-white/5 rounded-2xl border border-slate-200/60 dark:border-white/10 p-6 shadow-lg">
       <h3 class="text-slate-900 dark:text-white font-semibold mb-4 flex items-center">
@@ -1039,5 +1068,10 @@ sudo systemctl start rathole</pre>
         </div>
       </div>
     </Teleport>
+    </template>
+    <!-- END Rathole -->
+
+    <!-- Sakura Frp 内容 -->
+    <FrpcManager v-if="provider === 'frpc'" />
   </div>
 </template>

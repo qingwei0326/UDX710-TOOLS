@@ -2643,6 +2643,305 @@ void handle_rathole_server_config(struct mg_connection *c,
   free(escaped);
 }
 
+/* ==================== Sakura Frp (frpc) 内网穿透 API ==================== */
+#include "system/frpc.h"
+
+/* GET /api/frpc/config - 获取 frpc 配置 */
+void handle_frpc_config_get(struct mg_connection *c,
+                            struct mg_http_message *hm) {
+  HTTP_CHECK_GET(c, hm);
+
+  FrpcConfig config;
+  frpc_get_config(&config);
+
+  JsonBuilder *j = json_new();
+  json_obj_open(j);
+  json_add_str(j, "server_addr", config.server_addr);
+  json_add_int(j, "server_port", config.server_port);
+  json_add_str(j, "token", config.token);
+  json_add_int(j, "auto_start", config.auto_start);
+  json_add_int(j, "enabled", config.enabled);
+  json_obj_close(j);
+  HTTP_OK_FREE(c, json_finish(j));
+}
+
+/* POST /api/frpc/config - 设置 frpc 配置 */
+void handle_frpc_config_set(struct mg_connection *c,
+                            struct mg_http_message *hm) {
+  HTTP_CHECK_POST(c, hm);
+
+  char server_addr[FRPC_ADDR_SIZE] = {0};
+  char token[FRPC_TOKEN_SIZE] = {0};
+  long server_port = 7000;
+  long auto_start = 0;
+  long enabled = 0;
+
+  mg_json_get_str(hm->body, "$.server_addr", server_addr, sizeof(server_addr));
+  mg_json_get_str(hm->body, "$.token", token, sizeof(token));
+  server_port = mg_json_get_long(hm->body, "$.server_port", 7000);
+  auto_start = mg_json_get_long(hm->body, "$.auto_start", 0);
+  enabled = mg_json_get_long(hm->body, "$.enabled", 0);
+
+  if (frpc_set_config(server_addr, (int)server_port, token, (int)auto_start,
+                      (int)enabled) == 0) {
+    HTTP_OK(c, "{\"status\":\"ok\",\"message\":\"配置保存成功\"}");
+  } else {
+    HTTP_ERROR(c, 500, "配置保存失败");
+  }
+}
+
+/* GET /api/frpc/proxies - 获取隧道列表 */
+void handle_frpc_proxies_list(struct mg_connection *c,
+                              struct mg_http_message *hm) {
+  HTTP_CHECK_GET(c, hm);
+
+  FrpcProxy proxies[FRPC_MAX_PROXIES];
+  int count = frpc_proxy_list(proxies, FRPC_MAX_PROXIES);
+
+  if (count < 0) {
+    HTTP_ERROR(c, 500, "获取隧道列表失败");
+    return;
+  }
+
+  JsonBuilder *j = json_new();
+  json_arr_open(j);
+  for (int i = 0; i < count; i++) {
+    json_obj_open(j);
+    json_add_int(j, "id", proxies[i].id);
+    json_add_str(j, "name", proxies[i].name);
+    json_add_str(j, "type", proxies[i].type);
+    json_add_str(j, "local_ip", proxies[i].local_ip);
+    json_add_int(j, "local_port", proxies[i].local_port);
+    json_add_int(j, "remote_port", proxies[i].remote_port);
+    json_add_int(j, "enabled", proxies[i].enabled);
+    json_add_long(j, "created_at", (long)proxies[i].created_at);
+    json_obj_close(j);
+  }
+  json_arr_close(j);
+  HTTP_OK_FREE(c, json_finish(j));
+}
+
+/* POST /api/frpc/proxies - 添加隧道 */
+void handle_frpc_proxy_add(struct mg_connection *c,
+                           struct mg_http_message *hm) {
+  HTTP_CHECK_POST(c, hm);
+
+  char name[FRPC_NAME_SIZE] = {0};
+  char type[FRPC_TYPE_SIZE] = "tcp";
+  char local_ip[FRPC_ADDR_SIZE] = "127.0.0.1";
+  long local_port = 0;
+  long remote_port = 0;
+
+  mg_json_get_str(hm->body, "$.name", name, sizeof(name));
+  mg_json_get_str(hm->body, "$.type", type, sizeof(type));
+  mg_json_get_str(hm->body, "$.local_ip", local_ip, sizeof(local_ip));
+  local_port = mg_json_get_long(hm->body, "$.local_port", 0);
+  remote_port = mg_json_get_long(hm->body, "$.remote_port", 0);
+
+  if (strlen(name) == 0 || local_port <= 0 || remote_port <= 0) {
+    HTTP_ERROR(c, 400, "参数不完整");
+    return;
+  }
+
+  if (frpc_proxy_add(name, type, local_ip, (int)local_port,
+                     (int)remote_port) == 0) {
+    /* 如果 frpc 正在运行，自动重启 */
+    if (frpc_get_status(NULL) == 1) {
+      frpc_restart();
+    }
+    HTTP_OK(c, "{\"status\":\"ok\",\"message\":\"隧道添加成功\"}");
+  } else {
+    HTTP_ERROR(c, 500, "隧道添加失败（名称可能重复）");
+  }
+}
+
+/* PUT /api/frpc/proxies/:id - 更新隧道 */
+void handle_frpc_proxy_update(struct mg_connection *c,
+                              struct mg_http_message *hm) {
+  HTTP_CHECK_ANY(c, hm);
+  HTTP_HANDLE_OPTIONS(c, hm);
+
+  if (!http_is_method(hm, "PUT")) {
+    http_method_error(c);
+    return;
+  }
+
+  /* 从 URI 中提取 ID */
+  int id = 0;
+  char id_str[16] = {0};
+  if (mg_json_get_str(hm->uri, "$", id_str, sizeof(id_str)) == 0) {
+    char *p = strrchr(id_str, '/');
+    if (p) id = atoi(p + 1);
+  }
+  /* 备用: 直接从 URI 解析 */
+  if (id == 0) {
+    struct mg_str uri = hm->uri;
+    char *p = memchr(uri.buf, '/', uri.len);
+    while (p) {
+      char *next = memchr(p + 1, '/', uri.len - (p + 1 - uri.buf));
+      if (!next) {
+        id = atoi(p + 1);
+        break;
+      }
+      p = next;
+    }
+  }
+
+  if (id <= 0) {
+    HTTP_ERROR(c, 400, "无效的隧道 ID");
+    return;
+  }
+
+  char name[FRPC_NAME_SIZE] = {0};
+  char type[FRPC_TYPE_SIZE] = "tcp";
+  char local_ip[FRPC_ADDR_SIZE] = "127.0.0.1";
+  long local_port = 0;
+  long remote_port = 0;
+  long enabled = 1;
+
+  mg_json_get_str(hm->body, "$.name", name, sizeof(name));
+  mg_json_get_str(hm->body, "$.type", type, sizeof(type));
+  mg_json_get_str(hm->body, "$.local_ip", local_ip, sizeof(local_ip));
+  local_port = mg_json_get_long(hm->body, "$.local_port", 0);
+  remote_port = mg_json_get_long(hm->body, "$.remote_port", 0);
+  enabled = mg_json_get_long(hm->body, "$.enabled", 1);
+
+  if (frpc_proxy_update(id, name, type, local_ip, (int)local_port,
+                        (int)remote_port, (int)enabled) == 0) {
+    if (frpc_get_status(NULL) == 1) {
+      frpc_restart();
+    }
+    HTTP_OK(c, "{\"status\":\"ok\",\"message\":\"隧道更新成功\"}");
+  } else {
+    HTTP_ERROR(c, 500, "隧道更新失败");
+  }
+}
+
+/* DELETE /api/frpc/proxies/:id - 删除隧道 */
+void handle_frpc_proxy_delete(struct mg_connection *c,
+                              struct mg_http_message *hm) {
+  HTTP_CHECK_ANY(c, hm);
+  HTTP_HANDLE_OPTIONS(c, hm);
+
+  if (!http_is_method(hm, "DELETE")) {
+    http_method_error(c);
+    return;
+  }
+
+  int id = 0;
+  struct mg_str uri = hm->uri;
+  char *last_slash = memrchr(uri.buf, '/', uri.len);
+  if (last_slash) {
+    id = atoi(last_slash + 1);
+  }
+
+  if (id <= 0) {
+    HTTP_ERROR(c, 400, "无效的隧道 ID");
+    return;
+  }
+
+  if (frpc_proxy_delete(id) == 0) {
+    if (frpc_get_status(NULL) == 1) {
+      frpc_restart();
+    }
+    HTTP_OK(c, "{\"status\":\"ok\",\"message\":\"隧道删除成功\"}");
+  } else {
+    HTTP_ERROR(c, 500, "隧道删除失败");
+  }
+}
+
+/* POST /api/frpc/start - 启动 frpc */
+void handle_frpc_start(struct mg_connection *c, struct mg_http_message *hm) {
+  HTTP_CHECK_POST(c, hm);
+
+  if (frpc_start() == 0) {
+    HTTP_OK(c, "{\"status\":\"ok\",\"message\":\"服务启动成功\"}");
+  } else {
+    HTTP_ERROR(c, 500, "服务启动失败，请检查配置和日志");
+  }
+}
+
+/* POST /api/frpc/stop - 停止 frpc */
+void handle_frpc_stop(struct mg_connection *c, struct mg_http_message *hm) {
+  HTTP_CHECK_POST(c, hm);
+
+  if (frpc_stop() == 0) {
+    HTTP_OK(c, "{\"status\":\"ok\",\"message\":\"服务已停止\"}");
+  } else {
+    HTTP_ERROR(c, 500, "停止服务失败");
+  }
+}
+
+/* GET /api/frpc/status - 获取 frpc 状态 */
+void handle_frpc_status(struct mg_connection *c, struct mg_http_message *hm) {
+  HTTP_CHECK_GET(c, hm);
+
+  FrpcStatus status;
+  frpc_get_status(&status);
+
+  JsonBuilder *j = json_new();
+  json_obj_open(j);
+  json_add_int(j, "running", status.running);
+  json_add_int(j, "pid", status.pid);
+  json_add_int(j, "proxy_count", status.proxy_count);
+  json_add_str(j, "last_error", status.last_error);
+  json_obj_close(j);
+  HTTP_OK_FREE(c, json_finish(j));
+}
+
+/* GET /api/frpc/logs - 获取 frpc 日志 */
+void handle_frpc_logs(struct mg_connection *c, struct mg_http_message *hm) {
+  HTTP_CHECK_GET(c, hm);
+
+  long lines = mg_json_get_long(hm->query_string, "lines", 100);
+  if (lines > 1000) lines = 1000;
+  if (lines < 1) lines = 100;
+
+  char *buf = (char *)malloc(256 * 1024);
+  if (!buf) {
+    HTTP_ERROR(c, 500, "内存分配失败");
+    return;
+  }
+
+  int len = frpc_get_logs(buf, 256 * 1024, (int)lines);
+
+  JsonBuilder *j = json_new();
+  json_obj_open(j);
+  json_add_str(j, "logs", len > 0 ? buf : "");
+  json_add_int(j, "lines", len > 0 ? (int)lines : 0);
+  json_obj_close(j);
+  free(buf);
+  HTTP_OK_FREE(c, json_finish(j));
+}
+
+/* POST /api/frpc/autostart - 设置 frpc 自启动 */
+void handle_frpc_autostart(struct mg_connection *c,
+                           struct mg_http_message *hm) {
+  HTTP_CHECK_POST(c, hm);
+
+  long auto_start = mg_json_get_long(hm->body, "$.auto_start", -1);
+
+  if (auto_start < 0) {
+    HTTP_ERROR(c, 400, "请提供 auto_start 参数");
+    return;
+  }
+
+  FrpcConfig config;
+  frpc_get_config(&config);
+
+  int enabled = config.enabled;
+  if (auto_start == 1) {
+    enabled = 1;
+  }
+
+  if (frpc_set_config(config.server_addr, config.server_port, config.token,
+                      (int)auto_start, enabled) == 0) {
+    HTTP_OK(c, "{\"status\":\"ok\",\"message\":\"自启动设置成功\"}");
+  } else {
+    HTTP_ERROR(c, 500, "自启动设置失败");
+  }
+}
+
 /* ==================== IPv6 Proxy 端口转发 API ==================== */
 #include "system/ipv6_proxy.h"
 
