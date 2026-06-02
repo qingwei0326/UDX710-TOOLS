@@ -286,6 +286,7 @@ const menuHidden = ref(JSON.parse(localStorage.getItem('menu_hidden') || '[]'))
 
 // 监听菜单显隐变化（从SystemSettings修改localStorage后触发）
 window.addEventListener('menu-config-changed', () => {
+  deviceType.value = localStorage.getItem('device_type') || 'battery'
   menuHidden.value = JSON.parse(localStorage.getItem('menu_hidden') || '[]')
 })
 
