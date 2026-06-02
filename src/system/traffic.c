@@ -25,6 +25,9 @@
 static int is_flow_control_running = 0;
 static pthread_t flow_control_thread;
 
+/* 前向声明 */
+static void init_vnstat_db(void);
+
 /* 流量配置 */
 typedef struct {
     long long much;
