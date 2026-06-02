@@ -908,16 +908,34 @@ void handle_update_install(struct mg_connection *c,
   json_obj_close(j);
   HTTP_OK_FREE(c, json_finish(j));
 
-  /* fork 子进程执行安装，父进程继续处理 HTTP 响应 */
+  /* fork 子进程执行安装 */
   pid_t pid = fork();
   if (pid == 0) {
     /* 子进程：等响应发完后执行安装 */
     sleep(2);
+
+    /* 复制文件 */
     char output[2048] = {0};
-    update_install(output, sizeof(output));
+    run_command(output, sizeof(output), "cp", "-f", "/tmp/update/server",
+                "/home/root/6677/server", NULL);
+    run_command(output, sizeof(output), "cp", "-rf", "/tmp/update/dist/*",
+                "/home/root/6677/dist/", NULL);
+    run_command(output, sizeof(output), "cp", "-f", "/tmp/update/version",
+                "/home/root/6677/version", NULL);
+    run_command(output, sizeof(output), "chmod", "755",
+                "/home/root/6677/server", NULL);
+
+    /* 杀掉旧服务器（父进程）并启动新服务器 */
+    pid_t parent = getppid();
+    kill(parent, SIGTERM);
+    usleep(500000);
+
+    /* 启动新服务器 */
+    execl("/home/root/6677/server", "server", NULL);
+
     _exit(0);
   }
-  /* 父进程正常返回 */
+  /* 父进程正常返回，HTTP 响应发出 */
 }
 
 /* GET /api/update/check - 检查远程版本 */
