@@ -276,151 +276,162 @@ onUnmounted(() => {
 
 <template>
   <div class="space-y-4 sm:space-y-6">
-    <!-- 标题 -->
+    <!-- 服务器配置 -->
     <div class="rounded-2xl bg-white/95 dark:bg-white/5 backdrop-blur border border-slate-200/60 dark:border-white/10 p-4 sm:p-6 shadow-lg shadow-slate-200/40 dark:shadow-black/20">
-      <div class="flex items-center space-x-3 mb-6">
-        <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center shadow-lg shadow-pink-500/30">
-          <i class="fas fa-wifi text-white text-lg sm:text-xl"></i>
-        </div>
-        <div>
-          <h3 class="text-slate-900 dark:text-white font-semibold text-sm sm:text-base">Sakura Frp</h3>
-          <p class="text-slate-500 dark:text-white/50 text-xs sm:text-sm">{{ t('rathole.frpcSubtitle') }}</p>
-        </div>
-      </div>
+      <h3 class="text-slate-900 dark:text-white font-semibold mb-4 flex items-center">
+        <i class="fas fa-server text-pink-500 mr-2"></i>
+        {{ t('rathole.serverConfig') }}
+      </h3>
 
-      <!-- 服务器配置 -->
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-        <div>
-          <label class="block text-slate-600 dark:text-white/60 text-sm mb-1">{{ t('rathole.serverAddr') }}</label>
-          <input v-model="config.server_addr" type="text"
-            class="w-full px-3 py-2 bg-slate-50 dark:bg-white/10 border border-slate-200 dark:border-white/20 rounded-xl text-slate-900 dark:text-white text-sm focus:border-pink-400 focus:ring-2 focus:ring-pink-400/20 transition-all"
-            placeholder="b1.xfrp.net">
+      <div class="space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-slate-700 dark:text-white/80 text-sm font-medium mb-1.5">{{ t('rathole.serverAddr') }}</label>
+            <input v-model="config.server_addr" type="text"
+              class="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white font-mono focus:border-pink-400 outline-none transition-all text-sm"
+              placeholder="b1.xfrp.net">
+          </div>
+          <div>
+            <label class="block text-slate-700 dark:text-white/80 text-sm font-medium mb-1.5">{{ t('rathole.serverPort') }}</label>
+            <input v-model.number="config.server_port" type="number"
+              class="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white font-mono focus:border-pink-400 outline-none transition-all text-sm"
+              placeholder="7000">
+          </div>
+          <div>
+            <label class="block text-slate-700 dark:text-white/80 text-sm font-medium mb-1.5">Token</label>
+            <input v-model="config.token" type="password"
+              class="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white font-mono focus:border-pink-400 outline-none transition-all text-sm"
+              placeholder="Access Token">
+          </div>
         </div>
-        <div>
-          <label class="block text-slate-600 dark:text-white/60 text-sm mb-1">{{ t('rathole.serverPort') || '服务器端口' }}</label>
-          <input v-model.number="config.server_port" type="number"
-            class="w-full px-3 py-2 bg-slate-50 dark:bg-white/10 border border-slate-200 dark:border-white/20 rounded-xl text-slate-900 dark:text-white text-sm focus:border-pink-400 focus:ring-2 focus:ring-pink-400/20 transition-all"
-            placeholder="7000">
-        </div>
-        <div>
-          <label class="block text-slate-600 dark:text-white/60 text-sm mb-1">Token</label>
-          <input v-model="config.token" type="password"
-            class="w-full px-3 py-2 bg-slate-50 dark:bg-white/10 border border-slate-200 dark:border-white/20 rounded-xl text-slate-900 dark:text-white text-sm focus:border-pink-400 focus:ring-2 focus:ring-pink-400/20 transition-all"
-            placeholder="Sakura Frp Access Token">
-        </div>
-      </div>
 
-      <div class="flex items-center justify-between">
-        <div class="flex items-center space-x-2">
-          <label class="relative cursor-pointer">
-            <input type="checkbox" :checked="config.auto_start" @click="toggleAutoStart" class="sr-only peer">
-            <div class="w-11 h-6 bg-slate-200 dark:bg-white/20 rounded-full peer peer-checked:bg-pink-500 transition-colors"></div>
-            <div class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5"></div>
-          </label>
-          <span class="text-slate-600 dark:text-white/60 text-sm">{{ t('rathole.autoStart') }}</span>
+        <div class="grid grid-cols-1 gap-4">
+          <div class="flex items-center justify-between p-4 bg-slate-50 dark:bg-white/5 rounded-xl">
+            <div class="flex items-center space-x-3">
+              <div class="w-10 h-10 rounded-lg bg-green-100 dark:bg-green-500/20 flex items-center justify-center">
+                <i class="fas fa-bolt text-green-500"></i>
+              </div>
+              <div>
+                <p class="text-slate-900 dark:text-white font-medium text-sm">{{ t('rathole.autoStart') }}</p>
+                <p class="text-slate-500 dark:text-white/50 text-xs">{{ t('rathole.autoStartDesc') }}</p>
+              </div>
+            </div>
+            <label class="relative cursor-pointer">
+              <input type="checkbox" :checked="config.auto_start" @click="toggleAutoStart" class="sr-only peer">
+              <div class="w-14 h-7 bg-slate-200 dark:bg-white/20 rounded-full peer peer-checked:bg-pink-500 transition-colors"></div>
+              <div class="absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform peer-checked:translate-x-7"></div>
+            </label>
+          </div>
         </div>
-        <a href="https://www.xfrp.net/" target="_blank" class="text-pink-500 hover:text-pink-600 text-sm">
-          <i class="fas fa-external-link-alt mr-1"></i>{{ t('rathole.registerAccount') || '注册樱花账号' }}
-        </a>
       </div>
     </div>
 
-    <!-- 隧道列表 -->
-    <div class="rounded-2xl bg-white/95 dark:bg-white/5 backdrop-blur border border-slate-200/60 dark:border-white/10 p-4 sm:p-6 shadow-lg shadow-slate-200/40 dark:shadow-black/20">
-      <div class="flex items-center justify-between mb-4">
-        <h4 class="text-slate-900 dark:text-white font-semibold text-sm">{{ t('rathole.serviceList') }}</h4>
-        <button @click="openNewDialog"
-          class="px-3 py-1.5 bg-pink-500/10 hover:bg-pink-500/20 text-pink-600 dark:text-pink-400 rounded-lg text-xs font-medium transition-all">
-          <i class="fas fa-plus mr-1"></i>{{ t('rathole.addService') }}
-        </button>
-      </div>
-
-      <!-- 快捷预设 -->
-      <div v-if="proxies.length === 0" class="mb-4 p-3 bg-slate-50 dark:bg-white/5 rounded-xl">
-        <p class="text-slate-500 dark:text-white/50 text-xs mb-2">{{ t('rathole.quickPresets') || '快捷预设:' }}</p>
-        <div class="flex flex-wrap gap-2">
-          <button v-for="p in presets" :key="p.name" @click="openNewDialog(); applyPreset(p)"
-            class="px-2 py-1 bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 rounded-lg text-xs text-slate-600 dark:text-white/60 hover:border-pink-400 hover:text-pink-500 transition-all">
-            {{ p.name }} ({{ p.local_port }}→{{ p.remote_port }})
+    <!-- 转发服务 + 运行状态 两栏布局 -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+      <!-- 转发服务 (左栏) -->
+      <div class="lg:col-span-2 rounded-2xl bg-white/95 dark:bg-white/5 backdrop-blur border border-slate-200/60 dark:border-white/10 p-4 sm:p-6 shadow-lg shadow-slate-200/40 dark:shadow-black/20">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-slate-900 dark:text-white font-semibold flex items-center">
+            <i class="fas fa-list text-pink-500 mr-2"></i>
+            {{ t('rathole.serviceList') }}
+          </h3>
+          <button @click="openNewDialog"
+            class="px-3 py-1.5 bg-pink-500/10 hover:bg-pink-500/20 text-pink-600 dark:text-pink-400 rounded-lg text-xs font-medium transition-all">
+            <i class="fas fa-plus mr-1"></i>{{ t('rathole.addService') }}
           </button>
         </div>
-      </div>
 
-      <div v-if="proxies.length === 0" class="text-center py-8 text-slate-400 dark:text-white/30">
-        <i class="fas fa-network-wired text-3xl mb-3"></i>
-        <p class="text-sm">{{ t('rathole.noServices') }}</p>
-      </div>
+        <!-- 快捷预设 -->
+        <div v-if="proxies.length === 0" class="mb-4 p-3 bg-slate-50 dark:bg-white/5 rounded-xl">
+          <p class="text-slate-500 dark:text-white/50 text-xs mb-2">{{ t('rathole.quickPresets') }}</p>
+          <div class="flex flex-wrap gap-2">
+            <button v-for="p in presets" :key="p.name" @click="openNewDialog(); applyPreset(p)"
+              class="px-2 py-1 bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 rounded-lg text-xs text-slate-600 dark:text-white/60 hover:border-pink-400 hover:text-pink-500 transition-all">
+              {{ p.name }} ({{ p.local_port }}→{{ p.remote_port }})
+            </button>
+          </div>
+        </div>
 
-      <div v-else class="space-y-2">
-        <div v-for="proxy in proxies" :key="proxy.id"
-          class="flex items-center justify-between p-3 bg-slate-50 dark:bg-white/5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 transition-all">
-          <div class="flex items-center space-x-3 min-w-0">
-            <div class="w-2 h-2 rounded-full flex-shrink-0"
-              :class="proxy.enabled ? 'bg-green-500' : 'bg-slate-300 dark:bg-white/20'"></div>
-            <div class="min-w-0">
-              <p class="text-slate-900 dark:text-white font-medium text-sm truncate">{{ proxy.name }}</p>
-              <p class="text-slate-500 dark:text-white/50 text-xs truncate">
-                {{ proxy.type.toUpperCase() }} {{ proxy.local_ip }}:{{ proxy.local_port }} → :{{ proxy.remote_port }}
-              </p>
+        <div v-if="proxies.length === 0" class="text-center py-8 text-slate-400 dark:text-white/30">
+          <i class="fas fa-network-wired text-3xl mb-3"></i>
+          <p class="text-sm">{{ t('rathole.noServices') }}</p>
+        </div>
+
+        <div v-else class="space-y-2">
+          <div v-for="proxy in proxies" :key="proxy.id"
+            class="flex items-center justify-between p-3 bg-slate-50 dark:bg-white/5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 transition-all">
+            <div class="flex items-center space-x-3 min-w-0">
+              <div class="w-2 h-2 rounded-full flex-shrink-0"
+                :class="proxy.enabled ? 'bg-green-500' : 'bg-slate-300 dark:bg-white/20'"></div>
+              <div class="min-w-0">
+                <p class="text-slate-900 dark:text-white font-medium text-sm truncate">{{ proxy.name }}</p>
+                <p class="text-slate-500 dark:text-white/50 text-xs truncate">
+                  {{ proxy.type.toUpperCase() }} {{ proxy.local_ip }}:{{ proxy.local_port }} → :{{ proxy.remote_port }}
+                </p>
+              </div>
+            </div>
+            <div class="flex items-center space-x-1 flex-shrink-0">
+              <button @click="openEditDialog(proxy)" class="w-8 h-8 rounded-lg hover:bg-slate-200 dark:hover:bg-white/10 text-slate-400 dark:text-white/40 flex items-center justify-center transition-all">
+                <i class="fas fa-edit text-xs"></i>
+              </button>
+              <button @click="deleteProxy(proxy)" class="w-8 h-8 rounded-lg hover:bg-red-100 dark:hover:bg-red-500/10 text-slate-400 dark:text-white/40 hover:text-red-500 flex items-center justify-center transition-all">
+                <i class="fas fa-trash text-xs"></i>
+              </button>
             </div>
           </div>
-          <div class="flex items-center space-x-1 flex-shrink-0">
-            <button @click="openEditDialog(proxy)" class="w-8 h-8 rounded-lg hover:bg-slate-200 dark:hover:bg-white/10 text-slate-400 dark:text-white/40 flex items-center justify-center transition-all">
-              <i class="fas fa-edit text-xs"></i>
-            </button>
-            <button @click="deleteProxy(proxy)" class="w-8 h-8 rounded-lg hover:bg-red-100 dark:hover:bg-red-500/10 text-slate-400 dark:text-white/40 hover:text-red-500 flex items-center justify-center transition-all">
-              <i class="fas fa-trash text-xs"></i>
-            </button>
+        </div>
+      </div>
+
+      <!-- 运行状态 (右栏) -->
+      <div class="rounded-2xl bg-white/95 dark:bg-white/5 backdrop-blur border border-slate-200/60 dark:border-white/10 p-4 sm:p-6 shadow-lg shadow-slate-200/40 dark:shadow-black/20">
+        <h3 class="text-slate-900 dark:text-white font-semibold mb-4 flex items-center">
+          <i class="fas fa-signal text-pink-500 mr-2"></i>
+          {{ t('rathole.status') }}
+        </h3>
+
+        <div class="flex items-center justify-between mb-4 p-3 bg-slate-50 dark:bg-white/5 rounded-xl">
+          <div class="flex items-center space-x-2">
+            <div class="w-3 h-3 rounded-full" :class="status.running ? 'bg-green-500 animate-pulse' : 'bg-slate-300 dark:bg-white/20'"></div>
+            <span class="text-slate-900 dark:text-white font-medium text-sm">
+              {{ status.running ? t('rathole.running') : t('rathole.stopped') }}
+            </span>
           </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 状态与控制 -->
-    <div class="rounded-2xl bg-white/95 dark:bg-white/5 backdrop-blur border border-slate-200/60 dark:border-white/10 p-4 sm:p-6 shadow-lg shadow-slate-200/40 dark:shadow-black/20">
-      <div class="flex items-center justify-between mb-4">
-        <div class="flex items-center space-x-2">
-          <div class="w-3 h-3 rounded-full" :class="status.running ? 'bg-green-500 animate-pulse' : 'bg-slate-300 dark:bg-white/20'"></div>
-          <span class="text-slate-900 dark:text-white font-medium text-sm">
-            {{ status.running ? t('rathole.running') : t('rathole.stopped') }}
+          <span class="text-slate-400 dark:text-white/30 text-xs">
+            {{ status.proxy_count }} {{ t('rathole.activeServices') }}
           </span>
-          <span v-if="status.pid > 0" class="text-slate-400 dark:text-white/30 text-xs">PID: {{ status.pid }}</span>
         </div>
-        <span class="text-slate-400 dark:text-white/30 text-xs">
-          {{ status.proxy_count }} {{ t('rathole.activeServices') }}
-        </span>
-      </div>
 
-      <div class="flex space-x-2">
-        <button v-if="!status.running" @click="startService"
-          class="flex-1 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl text-sm font-medium transition-all">
-          <i class="fas fa-play mr-1"></i>{{ t('rathole.start') }}
-        </button>
-        <button v-if="status.running" @click="stopService"
-          class="flex-1 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl text-sm font-medium transition-all">
-          <i class="fas fa-stop mr-1"></i>{{ t('rathole.stop') }}
-        </button>
-        <button @click="saveAndRestart"
-          class="flex-1 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-sm font-medium transition-all">
-          <i class="fas fa-sync-alt mr-1"></i>{{ t('rathole.restart') }}
-        </button>
-      </div>
-    </div>
-
-    <!-- 日志 -->
-    <div class="rounded-2xl bg-white/95 dark:bg-white/5 backdrop-blur border border-slate-200/60 dark:border-white/10 p-4 sm:p-6 shadow-lg shadow-slate-200/40 dark:shadow-black/20">
-      <div class="flex items-center justify-between mb-3">
-        <h4 class="text-slate-900 dark:text-white font-semibold text-sm">{{ t('rathole.logs') }}</h4>
-        <div class="flex items-center space-x-2">
-          <button @click="showGuide = true" class="text-slate-400 dark:text-white/40 hover:text-pink-500 transition-all" :title="t('rathole.guideTitle')">
-            <i class="fas fa-question-circle text-sm"></i>
+        <div class="space-y-2">
+          <button v-if="!status.running" @click="startService"
+            class="w-full py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-xl text-sm font-medium transition-all">
+            <i class="fas fa-play mr-1"></i>{{ t('rathole.start') }}
           </button>
-          <button @click="fetchLogs" class="text-slate-400 dark:text-white/40 hover:text-slate-600 dark:hover:text-white/60 transition-all">
-            <i class="fas fa-sync-alt text-sm"></i>
+          <button v-if="status.running" @click="stopService"
+            class="w-full py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl text-sm font-medium transition-all">
+            <i class="fas fa-stop mr-1"></i>{{ t('rathole.stop') }}
+          </button>
+          <button @click="saveAndRestart"
+            class="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-sm font-medium transition-all">
+            <i class="fas fa-sync-alt mr-1"></i>{{ t('rathole.restart') }}
           </button>
         </div>
+
+        <!-- 日志 -->
+        <div class="mt-4">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-slate-900 dark:text-white font-medium text-sm">{{ t('rathole.logs') }}</span>
+            <div class="flex items-center space-x-1">
+              <button @click="showGuide = true" class="w-7 h-7 rounded-lg hover:bg-slate-200 dark:hover:bg-white/10 text-slate-400 dark:text-white/40 flex items-center justify-center transition-all" :title="t('rathole.guideTitle')">
+                <i class="fas fa-question-circle text-xs"></i>
+              </button>
+              <button @click="fetchLogs" class="w-7 h-7 rounded-lg hover:bg-slate-200 dark:hover:bg-white/10 text-slate-400 dark:text-white/40 flex items-center justify-center transition-all">
+                <i class="fas fa-sync-alt text-xs"></i>
+              </button>
+            </div>
+          </div>
+          <div class="bg-slate-900 dark:bg-black/50 rounded-xl p-3 max-h-40 overflow-y-auto font-mono text-xs text-green-400 whitespace-pre-wrap">{{ logs || 'No logs...' }}</div>
+        </div>
       </div>
-      <div class="bg-slate-900 dark:bg-black/50 rounded-xl p-3 max-h-48 overflow-y-auto font-mono text-xs text-green-400 whitespace-pre-wrap">{{ logs || 'No logs...' }}</div>
     </div>
 
     <!-- 新增/编辑对话框 -->
