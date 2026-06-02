@@ -1,0 +1,62 @@
+name: Build UDX710 Tools
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build-arm:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+          sudo apt-get update
+          sudo apt-get install -y nodejs
+
+      - name: Cache cross compiler (aarch64)
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/tools/gcc-linaro-7.5.0-2019.12-x86_64_aarch64-linux-gnu
+          key: gcc-linaro-7.5.0-2019.12-x86_64_aarch64-linux-gnu
+
+      - name: Configure cross compiler (aarch64)
+        run: |
+          mkdir -p $GITHUB_WORKSPACE/tools
+          if [ ! -d "$GITHUB_WORKSPACE/tools/gcc-linaro-7.5.0-2019.12-x86_64_aarch64-linux-gnu" ]; then
+            wget https://releases.linaro.org/components/toolchain/binaries/7.5-2019.12/aarch64-linux-gnu/gcc-linaro-7.5.0-2019.12-x86_64_aarch64-linux-gnu.tar.xz
+            tar xf gcc-linaro-7.5.0-2019.12-x86_64_aarch64-linux-gnu.tar.xz -C $GITHUB_WORKSPACE/tools
+          fi
+          echo "PATH=$PATH:$GITHUB_WORKSPACE/tools/gcc-linaro-7.5.0-2019.12-x86_64_aarch64-linux-gnu/bin" >> $GITHUB_ENV
+
+      - name: build web
+        run: |
+          cd web
+          npm install && npm run build
+
+      - name: build server
+        run: |
+          cd src
+          make
+
+      - name: dopack
+        run: |
+          mkdir -p output/6677
+          echo "#!/bin/sh" > start.sh
+          echo "cd /home/root/6677" >> start.sh
+          echo "chmod 755 *" >> start.sh
+          echo "./server &" >> start.sh
+          mv start.sh output/6677/
+          cp -r web/dist output/6677/
+          cp src/build/ofono-server output/6677/server
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: udx710-tools
+          path: output
+

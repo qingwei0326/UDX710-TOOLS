@@ -1,0 +1,39 @@
+# Build outputs
+src/build/
+web/dist/
+
+# Dependencies
+web/node_modules/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Compiled objects
+*.o
+*.obj
+*.exe
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Package lock (optional, uncomment if needed)
+# web/package-lock.json
