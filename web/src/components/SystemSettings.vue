@@ -36,10 +36,16 @@ function setDeviceType(type) {
 }
 
 // 菜单管理
-const allMenuKeys = [
-  'monitor', 'network', 'netif', 'apn', 'advanced', 'sms', 'traffic',
-  'battery', 'rathole', 'ipv6proxy', 'update', 'at', 'terminal', 'usb', 'plugins'
-]
+const allMenuKeys = computed(() => {
+  const keys = [
+    'monitor', 'network', 'netif', 'apn', 'advanced', 'sms', 'traffic',
+    'battery', 'rathole', 'ipv6proxy', 'update', 'at', 'terminal', 'usb', 'plugins'
+  ]
+  if (deviceType.value === 'no-battery') {
+    return keys.filter(k => k !== 'battery')
+  }
+  return keys
+})
 const menuIcons = {
   monitor: 'fa-tachometer-alt', network: 'fa-network-wired', netif: 'fa-ethernet',
   apn: 'fa-globe', advanced: 'fa-tower-cell', sms: 'fa-envelope', traffic: 'fa-chart-area',
