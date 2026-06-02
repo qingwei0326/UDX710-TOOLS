@@ -114,14 +114,16 @@ Lightweight, efficient, and perfect for resource-constrained embedded devices!
 - **Dark Mode**: Full dark/light theme support
 - **Responsive Design**: Mobile and desktop optimized
 - **Real-time Updates**: Live data refresh
-- **Chinese Interface**: Native Chinese language support
+- **Multi-language**: Chinese and English support
+- **Device Type**: Battery/No-battery mode, auto-hides irrelevant features
+- **Menu Management**: Toggle sidebar menu items visibility
 
 ### Security Features
 - **Backend Authentication**: Password-protected admin interface
   - Default password: `admin` (recommended to change after first login)
   - Token-based authentication with auto-expiration
-  - Remember password option
   - Password change support
+  - Security questions for password recovery
 
 ## Architecture
 
