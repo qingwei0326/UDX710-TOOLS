@@ -139,6 +139,9 @@ extern int get_imsi(char *imsi, size_t size);
 extern const char *get_carrier_from_imsi(const char *imsi);
 extern int get_airplane_mode(void);
 
+/* 每核心CPU使用率 (定义在文件底部) */
+extern double g_cpu_core0, g_cpu_core1;
+
 int get_system_info(SystemInfo *info) {
     struct utsname uts;
     char buf[256];
