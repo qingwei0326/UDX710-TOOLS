@@ -60,3 +60,24 @@ jobs:
           name: udx710-tools
           path: output
 
+      - name: Create OTA package
+        run: |
+          cat > install.sh << 'EOF'
+          #!/bin/sh
+          cd /home/root/6677
+          killall server 2>/dev/null
+          cp -f /tmp/update/server ./server
+          cp -rf /tmp/update/dist/* ./dist/
+          chmod 755 server
+          ./server &
+          EOF
+          cp install.sh output/6677/
+          cd output/6677
+          zip -r ../../update.zip .
+
+      - name: Upload OTA package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ota-update
+          path: update.zip
+
