@@ -2656,11 +2656,15 @@ void handle_frpc_config_get(struct mg_connection *c,
 
   JsonBuilder *j = json_new();
   json_obj_open(j);
+  json_add_str(j, "status", "ok");
+  json_add_str(j, "message", "");
+  json_key_obj_open(j, "data");
   json_add_str(j, "server_addr", config.server_addr);
   json_add_int(j, "server_port", config.server_port);
   json_add_str(j, "token", config.token);
   json_add_int(j, "auto_start", config.auto_start);
   json_add_int(j, "enabled", config.enabled);
+  json_obj_close(j);
   json_obj_close(j);
   HTTP_OK_FREE(c, json_finish(j));
 }
@@ -2701,9 +2705,13 @@ void handle_frpc_proxies_list(struct mg_connection *c,
   }
 
   JsonBuilder *j = json_new();
-  json_arr_open(j, NULL);
+  json_obj_open(j);
+  json_add_str(j, "status", "ok");
+  json_add_str(j, "message", "");
+  json_arr_open(j, "data");
+
   for (int i = 0; i < count; i++) {
-    json_obj_open(j);
+    json_arr_obj_open(j);
     json_add_int(j, "id", proxies[i].id);
     json_add_str(j, "name", proxies[i].name);
     json_add_str(j, "type", proxies[i].type);
@@ -2715,6 +2723,7 @@ void handle_frpc_proxies_list(struct mg_connection *c,
     json_obj_close(j);
   }
   json_arr_close(j);
+  json_obj_close(j);
   HTTP_OK_FREE(c, json_finish(j));
 }
 
@@ -2863,10 +2872,14 @@ void handle_frpc_status(struct mg_connection *c, struct mg_http_message *hm) {
 
   JsonBuilder *j = json_new();
   json_obj_open(j);
+  json_add_str(j, "status", "ok");
+  json_add_str(j, "message", "");
+  json_key_obj_open(j, "data");
   json_add_int(j, "running", status.running);
   json_add_int(j, "pid", status.pid);
   json_add_int(j, "proxy_count", status.proxy_count);
   json_add_str(j, "last_error", status.last_error);
+  json_obj_close(j);
   json_obj_close(j);
   HTTP_OK_FREE(c, json_finish(j));
 }
@@ -2895,8 +2908,12 @@ void handle_frpc_logs(struct mg_connection *c, struct mg_http_message *hm) {
 
   JsonBuilder *j = json_new();
   json_obj_open(j);
+  json_add_str(j, "status", "ok");
+  json_add_str(j, "message", "");
+  json_key_obj_open(j, "data");
   json_add_str(j, "logs", len > 0 ? buf : "");
   json_add_int(j, "lines", len > 0 ? (int)lines : 0);
+  json_obj_close(j);
   json_obj_close(j);
   free(buf);
   HTTP_OK_FREE(c, json_finish(j));
