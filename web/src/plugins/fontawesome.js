@@ -96,6 +96,9 @@ import {
   faSnowflake,
   faQuestion,
 
+  // SystemMonitor.vue 手机号
+  faPhone,
+
   // AdvancedNetwork.vue
   faLock,
   faUnlock,
@@ -288,6 +291,7 @@ library.add(
   faSpinner,
   faStar,
   faExclamationTriangle,
+  faPhone,
   faPaperPlane,
   faCode,
   faHistory,
