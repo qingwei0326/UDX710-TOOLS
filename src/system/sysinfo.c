@@ -114,8 +114,8 @@ int get_signal_strength(char *strength, size_t size) {
         return -1;
     }
 
-    /* 格式化输出: "XX%, -YY dBm" */
-    snprintf(strength, size, "%d%%, -%d dBm", strength_val, dbm_val);
+    /* 格式化输出: "XX%, -YY dBm" (dBm已经是负值，直接用) */
+    snprintf(strength, size, "%d%%, %d dBm", strength_val, dbm_val);
     return 0;
 }
 
@@ -281,6 +281,8 @@ int get_system_info(SystemInfo *info) {
 
     /* CPU 使用率 */
     info->cpu_usage = get_cpu_usage();
+    info->cpu_usage_core0 = g_cpu_core0;
+    info->cpu_usage_core1 = g_cpu_core1;
 
     return 0;
 }
@@ -373,32 +375,46 @@ static unsigned long long prev_idle = 0, prev_iowait = 0, prev_irq = 0;
 static unsigned long long prev_softirq = 0, prev_steal = 0;
 static int cpu_initialized = 0;
 
+/* 每核心采样数据 (最多4核) */
+#define MAX_CPU_CORES 4
+static unsigned long long prev_core_user[MAX_CPU_CORES] = {0};
+static unsigned long long prev_core_nice[MAX_CPU_CORES] = {0};
+static unsigned long long prev_core_system[MAX_CPU_CORES] = {0};
+static unsigned long long prev_core_idle[MAX_CPU_CORES] = {0};
+static unsigned long long prev_core_iowait[MAX_CPU_CORES] = {0};
+static int core_count = 0;
+double g_cpu_core0 = 0, g_cpu_core1 = 0;
+
 double get_cpu_usage(void) {
     char buf[1024];
     unsigned long long user, nice, system, idle, iowait, irq, softirq, steal;
-    
+
     /* 读取 /proc/stat */
     FILE *f = fopen("/proc/stat", "r");
     if (!f) return 0;
-    
-    if (fgets(buf, sizeof(buf), f) == NULL) {
-        fclose(f);
-        return 0;
+
+    /* 读取所有行 */
+    char lines[16][256];
+    int line_count = 0;
+    while (fgets(buf, sizeof(buf), f) && line_count < 16) {
+        strncpy(lines[line_count], buf, 255);
+        lines[line_count][255] = '\0';
+        line_count++;
     }
     fclose(f);
-    
-    /* 解析第一行 cpu 数据 */
-    /* 格式: cpu  user nice system idle iowait irq softirq steal [guest guest_nice] */
-    int ret = sscanf(buf, "cpu %llu %llu %llu %llu %llu %llu %llu %llu",
+
+    if (line_count < 1) return 0;
+
+    /* 解析第一行 cpu (总计) */
+    int ret = sscanf(lines[0], "cpu %llu %llu %llu %llu %llu %llu %llu %llu",
                      &user, &nice, &system, &idle, &iowait, &irq, &softirq, &steal);
     if (ret < 4) return 0;
-    
-    /* 如果某些字段不存在，设为0 */
+
     if (ret < 5) iowait = 0;
     if (ret < 6) irq = 0;
     if (ret < 7) softirq = 0;
     if (ret < 8) steal = 0;
-    
+
     /* 首次调用，保存数据并返回0 */
     if (!cpu_initialized) {
         prev_user = user;
@@ -409,11 +425,27 @@ double get_cpu_usage(void) {
         prev_irq = irq;
         prev_softirq = softirq;
         prev_steal = steal;
+
+        /* 同时保存每核心数据 */
+        core_count = 0;
+        for (int i = 1; i < line_count && core_count < MAX_CPU_CORES; i++) {
+            unsigned long long cu, cn, cs, ci, ciot;
+            if (sscanf(lines[i], "cpu%*d %llu %llu %llu %llu %llu",
+                       &cu, &cn, &cs, &ci, &ciot) >= 4) {
+                prev_core_user[core_count] = cu;
+                prev_core_nice[core_count] = cn;
+                prev_core_system[core_count] = cs;
+                prev_core_idle[core_count] = ci;
+                prev_core_iowait[core_count] = (ciot > 0) ? ciot : 0;
+                core_count++;
+            }
+        }
+
         cpu_initialized = 1;
         return 0;
     }
-    
-    /* 计算差值 */
+
+    /* 计算总计差值 */
     unsigned long long user_diff = user - prev_user;
     unsigned long long nice_diff = nice - prev_nice;
     unsigned long long system_diff = system - prev_system;
@@ -422,11 +454,10 @@ double get_cpu_usage(void) {
     unsigned long long irq_diff = irq - prev_irq;
     unsigned long long softirq_diff = softirq - prev_softirq;
     unsigned long long steal_diff = steal - prev_steal;
-    
-    /* 总时间差 */
+
     unsigned long long total_diff = user_diff + nice_diff + system_diff + idle_diff +
                                     iowait_diff + irq_diff + softirq_diff + steal_diff;
-    
+
     /* 保存当前值供下次使用 */
     prev_user = user;
     prev_nice = nice;
@@ -436,18 +467,42 @@ double get_cpu_usage(void) {
     prev_irq = irq;
     prev_softirq = softirq;
     prev_steal = steal;
-    
+
+    /* 计算每核心使用率 */
+    g_cpu_core0 = 0;
+    g_cpu_core1 = 0;
+    for (int i = 0; i < core_count && i < MAX_CPU_CORES; i++) {
+        if (i + 1 >= line_count) break;
+        unsigned long long cu, cn, cs, ci, ciot;
+        if (sscanf(lines[i + 1], "cpu%*d %llu %llu %llu %llu %llu",
+                   &cu, &cn, &cs, &ci, &ciot) >= 4) {
+            unsigned long long c_total = (cu - prev_core_user[i]) + (cn - prev_core_nice[i]) +
+                                         (cs - prev_core_system[i]) + (ci - prev_core_idle[i]);
+            unsigned long long c_idle = (ci - prev_core_idle[i]);
+            if (c_total > 0) {
+                double core_usage = 100.0 - ((double)c_idle / c_total * 100.0);
+                if (core_usage < 0) core_usage = 0;
+                if (core_usage > 100) core_usage = 100;
+                if (i == 0) g_cpu_core0 = core_usage;
+                if (i == 1) g_cpu_core1 = core_usage;
+            }
+            prev_core_user[i] = cu;
+            prev_core_nice[i] = cn;
+            prev_core_system[i] = cs;
+            prev_core_idle[i] = ci;
+            prev_core_iowait[i] = (ciot > 0) ? ciot : 0;
+        }
+    }
+
     /* 避免除零 */
     if (total_diff == 0) return 0;
-    
+
     /* CPU使用率 = 100 - idle百分比 */
-    /* idle时间包括 idle + iowait */
     double idle_percent = (double)(idle_diff + iowait_diff) / total_diff * 100.0;
     double usage = 100.0 - idle_percent;
-    
-    /* 限制范围 0-100 */
+
     if (usage < 0) usage = 0;
     if (usage > 100) usage = 100;
-    
+
     return usage;
 }

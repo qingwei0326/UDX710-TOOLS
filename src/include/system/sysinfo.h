@@ -46,6 +46,8 @@ typedef struct {
     int qci;
     int downlink_rate;
     int uplink_rate;
+    double cpu_usage_core0;
+    double cpu_usage_core1;
 } SystemInfo;
 
 /**

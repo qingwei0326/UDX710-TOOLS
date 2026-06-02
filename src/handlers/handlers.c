@@ -39,6 +39,8 @@ void handle_info(struct mg_connection *c, struct mg_http_message *hm) {
   json_add_ulong(j, "free_ram", info.free_ram);
   json_add_ulong(j, "cached_ram", info.cached_ram);
   json_add_double(j, "cpu_usage", info.cpu_usage);
+  json_add_double(j, "cpu_core0", info.cpu_usage_core0);
+  json_add_double(j, "cpu_core1", info.cpu_usage_core1);
   json_add_double(j, "uptime", info.uptime);
   json_add_str(j, "bridge_status", info.bridge_status);
   json_add_str(j, "sim_slot", info.sim_slot);

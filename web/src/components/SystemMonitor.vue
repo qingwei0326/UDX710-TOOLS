@@ -127,6 +127,15 @@ const cpuPercent = computed(() => {
   const cpu = systemInfo.value?.cpu_usage || 0
   return Math.round(cpu * 10) / 10
 })
+const cpuCore0 = computed(() => {
+  return Math.round((systemInfo.value?.cpu_core0 || 0) * 10) / 10
+})
+const cpuCore1 = computed(() => {
+  return Math.round((systemInfo.value?.cpu_core1 || 0) * 10) / 10
+})
+const hasMultiCore = computed(() => {
+  return (systemInfo.value?.cpu_core0 || 0) > 0 || (systemInfo.value?.cpu_core1 || 0) > 0
+})
 
 // 格式化速率
 function formatRate(kbps) {
@@ -437,6 +446,29 @@ async function handleClearCache() {
               <span>0%</span>
               <span>50%</span>
               <span>100%</span>
+            </div>
+            <!-- 双核详情 -->
+            <div v-if="hasMultiCore" class="grid grid-cols-2 gap-3 mt-4">
+              <div class="p-2 bg-slate-50 dark:bg-white/5 rounded-lg">
+                <div class="flex justify-between items-center mb-1">
+                  <span class="text-slate-500 dark:text-white/50 text-xs">CPU0</span>
+                  <span class="text-orange-500 dark:text-orange-400 text-xs font-bold">{{ cpuCore0 }}%</span>
+                </div>
+                <div class="h-1.5 bg-slate-200 dark:bg-white/10 rounded-full overflow-hidden">
+                  <div class="h-full bg-gradient-to-r from-orange-400 to-red-400 rounded-full transition-all duration-1000"
+                    :style="{ width: cpuCore0 + '%' }"></div>
+                </div>
+              </div>
+              <div class="p-2 bg-slate-50 dark:bg-white/5 rounded-lg">
+                <div class="flex justify-between items-center mb-1">
+                  <span class="text-slate-500 dark:text-white/50 text-xs">CPU1</span>
+                  <span class="text-blue-500 dark:text-blue-400 text-xs font-bold">{{ cpuCore1 }}%</span>
+                </div>
+                <div class="h-1.5 bg-slate-200 dark:bg-white/10 rounded-full overflow-hidden">
+                  <div class="h-full bg-gradient-to-r from-blue-400 to-cyan-400 rounded-full transition-all duration-1000"
+                    :style="{ width: cpuCore1 + '%' }"></div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
