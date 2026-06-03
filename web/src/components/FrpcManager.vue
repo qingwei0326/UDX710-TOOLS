@@ -262,13 +262,13 @@ async function downloadFrpc() {
       headers: getHeaders()
     })
     const data = await res.json()
-    if (data.status === 'ok') {
+    if (res.ok && data.status === 'ok') {
       downloading.value = true
       downloadStatus.value = 1
       downloadLog.value = '开始下载...\n'
       pollDownloadStatus()
     } else {
-      error(data.message || '下载启动失败')
+      error(data.error || data.message || '下载启动失败')
     }
   } catch (e) {
     error(e.message)

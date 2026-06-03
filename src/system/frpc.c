@@ -699,7 +699,7 @@ int frpc_clear_logs(void) {
 #define FRPC_DOWNLOAD_URL         "https://nya.globalslb.net/natfrp/client/launcher-unix/3.1.8/natfrp-service_linux_arm64.tar.zst"
 
 int frpc_download_binary(void) {
-  /* 检查是否已在下载 */
+  /* 检查是否已在下载（status=1 表示进行中） */
   FILE *fp = fopen(FRPC_DOWNLOAD_STATUS_PATH, "r");
   if (fp) {
     char status[16] = {0};
@@ -707,19 +707,38 @@ int frpc_download_binary(void) {
       int s = atoi(status);
       fclose(fp);
       if (s == 1) {
-        printf("[Frpc] 下载正在进行中\n");
-        return -1;  /* 已在下载 */
+        /* 检查下载进程是否还活着 */
+        char cmd[256];
+        char output[64] = {0};
+        snprintf(cmd, sizeof(cmd), "ps | grep 'natfrp.tar.zst' | grep -v grep");
+        if (run_command(output, sizeof(output), "sh", "-c", cmd, NULL) != 0
+            || strlen(output) == 0) {
+          /* 进程不在了，清理残留状态 */
+          printf("[Frpc] 清理残留下载状态\n");
+          unlink(FRPC_DOWNLOAD_STATUS_PATH);
+        } else {
+          printf("[Frpc] 下载正在进行中\n");
+          return -1;
+        }
       }
     } else {
       fclose(fp);
     }
   }
 
+  /* 检查 curl 是否可用 */
+  char curl_check[64] = {0};
+  if (run_command(curl_check, sizeof(curl_check), "sh", "-c", "which curl", NULL) != 0
+      || strlen(curl_check) == 0) {
+    printf("[Frpc] curl 未安装\n");
+    return -2;
+  }
+
   /* 检查目标路径是否可写 */
   FILE *test = fopen(FRPC_BIN_PATH, "w");
   if (!test) {
     printf("[Frpc] 目标路径不可写: %s\n", FRPC_BIN_PATH);
-    return -1;
+    return -3;
   }
   fclose(test);
   unlink(FRPC_BIN_PATH);  /* 删除测试文件 */

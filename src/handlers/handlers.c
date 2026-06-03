@@ -2975,8 +2975,14 @@ void handle_frpc_download(struct mg_connection *c, struct mg_http_message *hm) {
   int ret = frpc_download_binary();
   if (ret == 0) {
     HTTP_OK(c, "{\"status\":\"ok\",\"message\":\"开始下载\"}");
-  } else {
+  } else if (ret == -1) {
     HTTP_ERROR(c, 409, "下载已在进行中");
+  } else if (ret == -2) {
+    HTTP_ERROR(c, 500, "curl 未安装，无法下载");
+  } else if (ret == -3) {
+    HTTP_ERROR(c, 500, "目标路径不可写");
+  } else {
+    HTTP_ERROR(c, 500, "下载启动失败");
   }
 }
 
