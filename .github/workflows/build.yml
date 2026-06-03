@@ -90,16 +90,7 @@ jobs:
           cp output/6677/server ota-light/
           cp -r output/6677/dist ota-light/
           cp output/6677/version ota-light/
-          cat > ota-light/install.sh << 'INSTALLEOF'
-#!/bin/sh
-cd /home/root/6677
-cp -f /tmp/update/server ./server
-cp -rf /tmp/update/dist/* ./dist/
-if [ -f /tmp/update/version ]; then
-  cp -f /tmp/update/version ./version
-fi
-chmod 755 server
-INSTALLEOF
+          printf '#!/bin/sh\ncd /home/root/6677\ncp -f /tmp/update/server ./server\ncp -rf /tmp/update/dist/* ./dist/\nif [ -f /tmp/update/version ]; then\n  cp -f /tmp/update/version ./version\nfi\nchmod 755 server\n' > ota-light/install.sh
           chmod 755 ota-light/install.sh
           cd ota-light && zip -r ../update.zip . && cd ..
           echo "Lightweight OTA size: $(ls -lh ../update.zip | awk '{print $5}')"
