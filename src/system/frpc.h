@@ -214,4 +214,28 @@ int frpc_clear_logs(void);
  */
 int frpc_generate_config(void);
 
+/*============================================================================
+ * 客户端下载
+ *============================================================================*/
+
+/**
+ * 下载 frpc 客户端二进制 (异步, fork子进程执行)
+ * @return 0=开始下载 -1=已在下载或失败
+ */
+int frpc_download_binary(void);
+
+/**
+ * 获取下载状态
+ * @return 0=未开始 1=下载中 2=成功 3=失败
+ */
+int frpc_get_download_status(void);
+
+/**
+ * 获取下载日志
+ * @param buf 输出缓冲区
+ * @param size 缓冲区大小
+ * @return 日志长度
+ */
+int frpc_get_download_log(char *buf, size_t size);
+
 #endif /* FRPC_H */

@@ -990,6 +990,7 @@
   // Rathole 内网穿透
   rathole: {
     title: '内网穿透',
+    subtitle: '通过 Rathole 或 Sakura Frp 暴露内网服务',
     description: '通过 Rathole 将内网服务暴露到公网',
     serverAddr: '服务器地址',
     serverAddrPlaceholder: 'your-server.com:2333',
@@ -1177,6 +1178,11 @@
     frpcGuideWarning1: '免费账户远端端口为随机端口，每次启动可能不同',
     frpcGuideWarning2: '免费账户有流量和带宽限制',
     frpcGuideWarning3: '如需固定端口和更高带宽，请升级付费套餐',
+    downloadFrpc: '下载 frpc 客户端',
+    downloading: '下载中...',
+    downloadSuccess: 'frpc 客户端安装成功！',
+    downloadFailed: '下载失败，请检查网络连接',
+    installed: '已安装',
   },
 
   // IPv6端口转发

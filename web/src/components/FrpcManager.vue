@@ -16,7 +16,11 @@ const logs = ref('')
 const showDialog = ref(false)
 const isEditing = ref(false)
 const showGuide = ref(false)
+const downloading = ref(false)
+const downloadStatus = ref(0)  // 0=未开始 1=下载中 2=成功 3=失败
+const downloadLog = ref('')
 let statusTimer = null
+let downloadTimer = null
 
 // 表单
 const form = ref({
@@ -90,6 +94,9 @@ async function fetchStatus() {
     const data = await res.json()
     if (data.status === 'ok' && data.data) {
       status.value = data.data
+      if (data.data.binary_exists) {
+        downloadStatus.value = 2  // 已安装
+      }
     }
   } catch (e) {
     console.error('获取状态失败:', e)
@@ -247,6 +254,51 @@ async function deleteProxy(proxy) {
   }
 }
 
+// 下载 frpc 客户端
+async function downloadFrpc() {
+  try {
+    const res = await fetch('/api/frpc/download', {
+      method: 'POST',
+      headers: getHeaders()
+    })
+    const data = await res.json()
+    if (data.status === 'ok') {
+      downloading.value = true
+      downloadStatus.value = 1
+      downloadLog.value = '开始下载...\n'
+      pollDownloadStatus()
+    } else {
+      error(data.message || '下载启动失败')
+    }
+  } catch (e) {
+    error(e.message)
+  }
+}
+
+async function pollDownloadStatus() {
+  if (downloadTimer) clearInterval(downloadTimer)
+  downloadTimer = setInterval(async () => {
+    try {
+      const res = await fetch('/api/frpc/download/status', { headers: getHeaders() })
+      const data = await res.json()
+      downloadStatus.value = data.status
+      downloadLog.value = data.log || ''
+      if (data.status === 2) {
+        downloading.value = false
+        success('frpc 客户端安装成功！')
+        clearInterval(downloadTimer)
+        await fetchStatus()
+      } else if (data.status === 3) {
+        downloading.value = false
+        error('下载失败，请检查网络连接')
+        clearInterval(downloadTimer)
+      }
+    } catch (e) {
+      console.error('轮询下载状态失败:', e)
+    }
+  }, 2000)
+}
+
 // 复制文本
 async function copyText(text) {
   try {
@@ -271,6 +323,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   if (statusTimer) clearInterval(statusTimer)
+  if (downloadTimer) clearInterval(downloadTimer)
 })
 </script>
 
@@ -414,6 +467,19 @@ onUnmounted(() => {
             class="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-sm font-medium transition-all">
             <i class="fas fa-sync-alt mr-1"></i>{{ t('rathole.restart') }}
           </button>
+          <button v-if="!downloading && downloadStatus !== 2" @click="downloadFrpc"
+            class="w-full py-2.5 bg-pink-500 hover:bg-pink-600 text-white rounded-xl text-sm font-medium transition-all">
+            <i class="fas fa-download mr-1"></i>{{ t('rathole.downloadFrpc') }}
+          </button>
+          <div v-if="downloading" class="w-full py-2.5 bg-pink-500/20 text-pink-400 rounded-xl text-sm font-medium text-center">
+            <i class="fas fa-spinner animate-spin mr-1"></i>{{ t('rathole.downloading') }}
+          </div>
+          <div v-if="downloadStatus === 2 && !downloading" class="w-full py-2.5 bg-green-500/20 text-green-400 rounded-xl text-sm font-medium text-center">
+            <i class="fas fa-check mr-1"></i>{{ t('rathole.installed') }}
+          </div>
+          <div v-if="downloadStatus === 3 && !downloading" class="w-full py-2.5 bg-red-500/20 text-red-400 rounded-xl text-sm font-medium text-center">
+            <i class="fas fa-times mr-1"></i>{{ t('rathole.downloadFailed') }}
+          </div>
         </div>
 
         <!-- 日志 -->

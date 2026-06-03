@@ -428,6 +428,10 @@ static void http_handler(struct mg_connection *c, int ev, void *ev_data) {
       handle_frpc_logs(c, hm);
     } else if (mg_match(hm->uri, mg_str("/api/frpc/autostart"), NULL)) {
       handle_frpc_autostart(c, hm);
+    } else if (mg_match(hm->uri, mg_str("/api/frpc/download/status"), NULL)) {
+      handle_frpc_download_status(c, hm);
+    } else if (mg_match(hm->uri, mg_str("/api/frpc/download"), NULL)) {
+      handle_frpc_download(c, hm);
     }
     /* IPv6 Proxy 端口转发 API */
     else if (mg_match(hm->uri, mg_str("/api/ipv6-proxy/config"), NULL)) {

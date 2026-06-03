@@ -148,6 +148,10 @@ void handle_frpc_status(struct mg_connection *c, struct mg_http_message *hm);
 void handle_frpc_logs(struct mg_connection *c, struct mg_http_message *hm);
 void handle_frpc_autostart(struct mg_connection *c,
                            struct mg_http_message *hm);
+void handle_frpc_download(struct mg_connection *c,
+                          struct mg_http_message *hm);
+void handle_frpc_download_status(struct mg_connection *c,
+                                 struct mg_http_message *hm);
 
 /* IPv6 Proxy 端口转发 API */
 void handle_ipv6_proxy_config_get(struct mg_connection *c,

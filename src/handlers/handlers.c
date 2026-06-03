@@ -2888,6 +2888,9 @@ void handle_frpc_status(struct mg_connection *c, struct mg_http_message *hm) {
   FrpcStatus status;
   frpc_get_status(&status);
 
+  /* 检查二进制文件是否存在 */
+  int binary_exists = (access(FRPC_BIN_PATH, X_OK) == 0);
+
   JsonBuilder *j = json_new();
   json_obj_open(j);
   json_add_str(j, "status", "ok");
@@ -2896,6 +2899,7 @@ void handle_frpc_status(struct mg_connection *c, struct mg_http_message *hm) {
   json_add_int(j, "running", status.running);
   json_add_int(j, "pid", status.pid);
   json_add_int(j, "proxy_count", status.proxy_count);
+  json_add_int(j, "binary_exists", binary_exists);
   json_add_str(j, "last_error", status.last_error);
   json_obj_close(j);
   json_obj_close(j);
@@ -2963,6 +2967,44 @@ void handle_frpc_autostart(struct mg_connection *c,
   } else {
     HTTP_ERROR(c, 500, "自启动设置失败");
   }
+}
+
+void handle_frpc_download(struct mg_connection *c, struct mg_http_message *hm) {
+  HTTP_CHECK_POST(c, hm);
+
+  int ret = frpc_download_binary();
+  if (ret == 0) {
+    HTTP_OK(c, "{\"status\":\"ok\",\"message\":\"开始下载\"}");
+  } else {
+    HTTP_ERROR(c, 409, "下载已在进行中");
+  }
+}
+
+void handle_frpc_download_status(struct mg_connection *c,
+                                 struct mg_http_message *hm) {
+  HTTP_CHECK_GET(c, hm);
+
+  int status = frpc_get_download_status();
+  char log[2048] = {0};
+  frpc_get_download_log(log, sizeof(log));
+
+  /* 转义日志中的特殊字符 */
+  char escaped[4096] = {0};
+  int j = 0;
+  for (int i = 0; log[i] && j < (int)sizeof(escaped) - 2; i++) {
+    if (log[i] == '"') { escaped[j++] = '\\'; escaped[j++] = '"'; }
+    else if (log[i] == '\\') { escaped[j++] = '\\'; escaped[j++] = '\\'; }
+    else if (log[i] == '\n') { escaped[j++] = '\\'; escaped[j++] = 'n'; }
+    else { escaped[j++] = log[i]; }
+  }
+  escaped[j] = '\0';
+
+  JsonBuilder *builder = json_new();
+  json_obj_open(builder);
+  json_add_int(builder, "status", status);
+  json_add_str(builder, "log", escaped);
+  json_obj_close(builder);
+  HTTP_OK_FREE(c, json_finish(builder));
 }
 
 /* ==================== IPv6 Proxy 端口转发 API ==================== */

@@ -990,6 +990,7 @@ export default {
   // Rathole Tunnel
   rathole: {
     title: 'NAT Traversal',
+    subtitle: 'Expose internal services via Rathole or Sakura Frp',
     description: 'Expose local services to the public network via Rathole',
     serverAddr: 'Server Address',
     serverAddrPlaceholder: 'your-server.com:2333',
@@ -1162,6 +1163,11 @@ export default {
     frpcGuideWarning1: 'Free accounts get random remote ports, which may change each restart',
     frpcGuideWarning2: 'Free accounts have traffic and bandwidth limits',
     frpcGuideWarning3: 'Upgrade to a paid plan for fixed ports and higher bandwidth',
+    downloadFrpc: 'Download frpc Client',
+    downloading: 'Downloading...',
+    downloadSuccess: 'frpc client installed successfully!',
+    downloadFailed: 'Download failed, please check network',
+    installed: 'Installed',
   },
 
   // IPv6 Port Forwarding

@@ -689,3 +689,124 @@ int frpc_clear_logs(void) {
   }
   return -1;
 }
+
+/*============================================================================
+ * 客户端下载
+ *============================================================================*/
+
+#define FRPC_DOWNLOAD_STATUS_PATH "/tmp/frpc_download_status"
+#define FRPC_DOWNLOAD_LOG_PATH    "/tmp/frpc_download.log"
+#define FRPC_DOWNLOAD_URL         "https://nya.globalslb.net/natfrp/client/launcher-unix/3.1.8/natfrp-service_linux_arm64.tar.zst"
+
+int frpc_download_binary(void) {
+  /* 检查是否已在下载 */
+  FILE *fp = fopen(FRPC_DOWNLOAD_STATUS_PATH, "r");
+  if (fp) {
+    char status[16] = {0};
+    if (fgets(status, sizeof(status), fp)) {
+      int s = atoi(status);
+      fclose(fp);
+      if (s == 1) {
+        printf("[Frpc] 下载正在进行中\n");
+        return -1;  /* 已在下载 */
+      }
+    } else {
+      fclose(fp);
+    }
+  }
+
+  /* 检查目标路径是否可写 */
+  FILE *test = fopen(FRPC_BIN_PATH, "w");
+  if (!test) {
+    printf("[Frpc] 目标路径不可写: %s\n", FRPC_BIN_PATH);
+    return -1;
+  }
+  fclose(test);
+  unlink(FRPC_BIN_PATH);  /* 删除测试文件 */
+
+  /* 设置状态为下载中 */
+  fp = fopen(FRPC_DOWNLOAD_STATUS_PATH, "w");
+  if (fp) {
+    fprintf(fp, "1\n");
+    fclose(fp);
+  }
+
+  printf("[Frpc] 开始下载客户端...\n");
+
+  /* fork 子进程执行下载 */
+  pid_t pid = fork();
+  if (pid == 0) {
+    /* 子进程 */
+    char cmd[1024];
+
+    /* 清空日志 */
+    FILE *logfp = fopen(FRPC_DOWNLOAD_LOG_PATH, "w");
+    if (logfp) fclose(logfp);
+
+    /* 下载 */
+    snprintf(cmd, sizeof(cmd),
+             "curl -sL '%s' -o /tmp/natfrp.tar.zst "
+             "&& echo '下载完成' >> '%s' "
+             "&& zstd -d /tmp/natfrp.tar.zst -o /tmp/natfrp.tar -f "
+             "&& echo '解压zstd完成' >> '%s' "
+             "&& tar xf /tmp/natfrp.tar -C /tmp/ "
+             "&& echo '解压tar完成' >> '%s' "
+             "&& cp /tmp/natfrp-service '%s' "
+             "&& chmod 755 '%s' "
+             "&& rm -f /tmp/natfrp.tar.zst /tmp/natfrp.tar /tmp/natfrp-service "
+             "&& echo '2' > '%s' "
+             "&& echo '安装完成' >> '%s' "
+             "|| (echo '3' > '%s' && echo '下载失败' >> '%s')",
+             FRPC_DOWNLOAD_URL,
+             FRPC_DOWNLOAD_LOG_PATH,
+             FRPC_DOWNLOAD_LOG_PATH,
+             FRPC_DOWNLOAD_LOG_PATH,
+             FRPC_BIN_PATH, FRPC_BIN_PATH,
+             FRPC_DOWNLOAD_STATUS_PATH,
+             FRPC_DOWNLOAD_LOG_PATH,
+             FRPC_DOWNLOAD_STATUS_PATH,
+             FRPC_DOWNLOAD_LOG_PATH);
+
+    execl("/bin/sh", "sh", "-c", cmd, NULL);
+    _exit(1);
+  }
+
+  if (pid < 0) {
+    printf("[Frpc] fork 失败\n");
+    fp = fopen(FRPC_DOWNLOAD_STATUS_PATH, "w");
+    if (fp) {
+      fprintf(fp, "3\n");
+      fclose(fp);
+    }
+    return -1;
+  }
+
+  printf("[Frpc] 下载子进程已启动, PID=%d\n", pid);
+  return 0;
+}
+
+int frpc_get_download_status(void) {
+  FILE *fp = fopen(FRPC_DOWNLOAD_STATUS_PATH, "r");
+  if (!fp) {
+    return 0;  /* 未开始 */
+  }
+  char status[16] = {0};
+  if (fgets(status, sizeof(status), fp)) {
+    fclose(fp);
+    return atoi(status);
+  }
+  fclose(fp);
+  return 0;
+}
+
+int frpc_get_download_log(char *buf, size_t size) {
+  if (!buf || size == 0) return -1;
+  buf[0] = '\0';
+
+  FILE *fp = fopen(FRPC_DOWNLOAD_LOG_PATH, "r");
+  if (!fp) return 0;
+  size_t n = fread(buf, 1, size - 1, fp);
+  buf[n] = '\0';
+  fclose(fp);
+  return (int)n;
+}
