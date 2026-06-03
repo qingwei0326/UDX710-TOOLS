@@ -61,14 +61,16 @@ jobs:
           cp -r web/dist output/6677/
           cp src/build/ofono-server output/6677/server
 
-      - name: Download frpc (aarch64)
+      - name: Download Sakura Frp client (aarch64)
         run: |
-          FRP_VERSION="0.61.1"
-          curl -sL "https://github.com/fatedier/frp/releases/download/v${FRP_VERSION}/frp_${FRP_VERSION}_linux_arm64.tar.gz" -o frp.tar.gz
-          tar xzf frp.tar.gz
-          cp frp_${FRP_VERSION}_linux_arm64/frpc output/6677/
+          sudo apt-get install -y zstd
+          curl -sL "https://nya.globalslb.net/natfrp/client/launcher-unix/3.1.8/natfrp-service_linux_arm64.tar.zst" -o natfrp.tar.zst
+          zstd -d natfrp.tar.zst
+          tar xf natfrp.tar
+          # 找到 frpc 二进制并复制
+          find . -name "frpc" -o -name "natfrp-service" | head -1 | xargs -I{} cp {} output/6677/frpc
           chmod 755 output/6677/frpc
-          rm -rf frp_*
+          rm -rf natfrp* frp_*
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
