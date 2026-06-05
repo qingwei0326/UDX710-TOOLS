@@ -83,13 +83,11 @@ int run_command_timeout(int timeout_sec, char *output, size_t size, const char *
 }
 
 void device_reboot(void) {
-    char buf[64];
-    run_command(buf, sizeof(buf), "reboot", NULL);
+    system("reboot &");
 }
 
 void device_poweroff(void) {
-    char buf[64];
-    run_command(buf, sizeof(buf), "poweroff", NULL);
+    system("poweroff &");
 }
 
 int clear_cache(void) {
