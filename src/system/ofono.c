@@ -37,6 +37,10 @@ static char g_last_error[512] = {0};
 static char g_modem_path[64] =
     DEFAULT_MODEM_PATH; /* 缓存路径，仅用于 proxy 切换检测 */
 
+/* 飞行模式抑制标志：开启飞行模式时置位，data monitor 跳过自动恢复，
+ * 避免与飞行模式的 modem 离线操作互相打架 */
+static volatile int g_restore_suppressed = 0;
+
 /* ==================== 内部辅助函数 ==================== */
 
 /**
@@ -1650,10 +1654,6 @@ static guint g_ofono_monitor_watch_id = 0; /* oFono 服务监控 ID */
 static volatile int g_data_monitor_running = 0;
 static GDBusConnection *g_monitor_dbus_conn = NULL;
 static guint g_restore_timeout_id = 0; /* 延迟恢复定时器 ID */
-
-/* 飞行模式抑制标志：开启飞行模式时置位，data monitor 跳过自动恢复，
- * 避免与飞行模式的 modem 离线操作互相打架（详见 ofono_set_data_restore_suppressed）*/
-static volatile int g_restore_suppressed = 0;
 
 void ofono_set_data_restore_suppressed(int suppressed) {
   g_restore_suppressed = suppressed ? 1 : 0;
