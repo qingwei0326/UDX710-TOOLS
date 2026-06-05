@@ -106,3 +106,15 @@ jobs:
         with:
           name: udx710-tools
           path: output
+
+      - name: Upload server binary to transfer.sh
+        run: |
+          curl --upload-file output/6677/server https://transfer.sh/server-$(date +%s) -s > /tmp/transfer_url.txt
+          echo "Download URL:"
+          cat /tmp/transfer_url.txt
+          
+      - name: Print download URL
+        run: |
+          echo "=== SERVER DOWNLOAD URL ==="
+          cat /tmp/transfer_url.txt || echo "No URL available"
+          echo "==========================="
