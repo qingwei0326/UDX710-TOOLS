@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file http_server.c
  * @brief HTTP 服务器实现 (对应 Go: main.go)
  */
@@ -548,17 +548,21 @@ int http_server_start(const char *port) {
   /* 初始化 mongoose */
   mg_mgr_init(&g_mgr);
 
-  /* 构建监听地址 - 使用 0.0.0.0 监听所有IPv4地址 */
+  /* 监听 IPv4 */
   snprintf(listen_addr, sizeof(listen_addr), "http://0.0.0.0:%s", port);
-
-  /* 创建 HTTP 监听器 */
   if (mg_http_listen(&g_mgr, listen_addr, http_handler, NULL) == NULL) {
-    printf("无法监听端口 %s\n", port);
+    printf("无法监听 IPv4 端口 %s\n", port);
     mg_mgr_free(&g_mgr);
     return -1;
   }
 
-  printf("Server starting on :%s\n", port);
+  /* 监听 IPv6 - 允许远程管理 */
+  snprintf(listen_addr, sizeof(listen_addr), "http://[::]:%s", port);
+  if (mg_http_listen(&g_mgr, listen_addr, http_handler, NULL) == NULL) {
+    printf("IPv6 监听失败(不影响IPv4)\n");
+  }
+
+  printf("Server starting on :%s (IPv4+IPv6)\n", port);
   g_running = 1;
 
   /* 设置信号处理 */
