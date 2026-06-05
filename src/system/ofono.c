@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file ofono.c
  * @brief ofono D-Bus 接口实现 (合并自 dbus_core.c)
  *
@@ -82,7 +82,9 @@ static int is_connection_valid(void) {
 static int ensure_connection(void) {
   GError *error = NULL;
 
+  pthread_mutex_lock(&g_at_mutex);
   if (is_connection_valid()) {
+    pthread_mutex_unlock(&g_at_mutex);
     return 1;
   }
 
@@ -90,8 +92,11 @@ static int ensure_connection(void) {
   if (!g_dbus_conn) {
     if (error)
       g_error_free(error);
+    pthread_mutex_unlock(&g_at_mutex);
+    set_error("D-Bus connection failed");
     return 0;
   }
+  pthread_mutex_unlock(&g_at_mutex);
   return 1;
 }
 

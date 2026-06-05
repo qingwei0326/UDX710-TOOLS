@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file airplane.c
  * @brief Airplane mode and SIM info (Go: system/airplane.go)
  */
@@ -91,17 +91,33 @@ int set_airplane_mode(int enabled) {
     }
 
     if (enabled) {
-        /* 开启飞行模式：先抑制 data monitor 自动恢复，再离线，
-         * 否则离线触发的断开信号会让 monitor 立刻尝试重连，与飞行模式打架 */
+        /* 开启飞行模式：先抑制 data monitor 自动恢复，再离线 */
         ofono_set_data_restore_suppressed(1);
         rc = ofono_modem_set_online(ril_path, online, OFONO_TIMEOUT_MS);
         if (rc != 0) {
-            /* 设置失败则解除抑制，避免卡死在抑制态 */
-            ofono_set_data_restore_suppressed(0);
+            printf("[Airplane] D-Bus set_online 失败(rc=%d), 尝试 AT 命令\n", rc);
+            char *at_result = NULL;
+            if (send_at("AT+CFUN=4", &at_result) == 0) {
+                rc = 0;  /* AT 命令成功 */
+                printf("[Airplane] AT+CFUN=4 成功\n");
+            }
+            if (at_result) g_free(at_result);
+            if (rc != 0) {
+                ofono_set_data_restore_suppressed(0);
+            }
         }
     } else {
         /* 关闭飞行模式：先在线，再解除抑制让 monitor 恢复数据连接 */
         rc = ofono_modem_set_online(ril_path, online, OFONO_TIMEOUT_MS);
+        if (rc != 0) {
+            printf("[Airplane] D-Bus set_online 失败(rc=%d), 尝试 AT 命令\n", rc);
+            char *at_result = NULL;
+            if (send_at("AT+CFUN=1", &at_result) == 0) {
+                rc = 0;
+                printf("[Airplane] AT+CFUN=1 成功\n");
+            }
+            if (at_result) g_free(at_result);
+        }
         ofono_set_data_restore_suppressed(0);
     }
 

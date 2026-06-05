@@ -51,7 +51,7 @@ static void save_traffic_config(TrafficConfig *config) {
 
 /* 从 vnstat 获取流量数据 */
 static void get_traffic_from_vnstat(long long *rx, long long *tx) {
-    char output[4096];
+    char output[16384];  /* vnstat --json can be >5KB */
     *rx = 0;
     *tx = 0;
 
