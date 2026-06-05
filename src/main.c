@@ -5,6 +5,7 @@
 
 #include "http_server.h"
 #include "netif.h"
+#include "led.h"
 #include "ofono.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,6 +31,10 @@ int main(int argc, char *argv[]) {
 
   /* 初始化网络接口监听（自动恢复之前启用的监听） */
   init_netif();
+
+  /* 初始化 LED 模块 */
+  printf("初始化 LED 模块...\n");
+  led_init();
 
   /* 启动数据连接监听（无论当前状态） */
   printf("启动数据连接监听...\n");

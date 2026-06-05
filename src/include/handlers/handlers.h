@@ -203,3 +203,16 @@ void handle_security_factory_reset(struct mg_connection *c,
 #endif
 
 #endif /* HANDLERS_H */
+/* WiFi 管理 API */
+void handle_wifi_status(struct mg_connection *c, struct mg_http_message *hm);
+void handle_wifi_config(struct mg_connection *c, struct mg_http_message *hm);
+void handle_wifi_enable(struct mg_connection *c, struct mg_http_message *hm);
+void handle_wifi_disable(struct mg_connection *c, struct mg_http_message *hm);
+void handle_wifi_band(struct mg_connection *c, struct mg_http_message *hm);
+void handle_wifi_clients(struct mg_connection *c, struct mg_http_message *hm);
+void handle_wifi_blacklist(struct mg_connection *c, struct mg_http_message *hm);
+void handle_wifi_whitelist(struct mg_connection *c, struct mg_http_message *hm);
+
+/* LED 控制 API (实现在 led.c 中) */
+
+/* 恢复出厂 API (实现在 factory_reset.c 中) */

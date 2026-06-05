@@ -19,6 +19,9 @@
 #include "system/phone_case.h"
 #include "system/rathole.h"
 #include "system/frpc.h"
+#include "wifi.h"
+#include "led.h"
+#include "factory_reset.h"
 #include "system/security.h"
 #include "traffic.h"
 #include "usb_mode.h"
@@ -485,6 +488,34 @@ static void http_handler(struct mg_connection *c, int ev, void *ev_data) {
       handle_security_reset_password(c, hm);
     } else if (mg_match(hm->uri, mg_str("/api/security/factory-reset"), NULL)) {
       handle_security_factory_reset(c, hm);
+    }
+    /* WiFi 管理 API */
+    else if (mg_match(hm->uri, mg_str("/api/wifi/status"), NULL)) {
+      handle_wifi_status(c, hm);
+    } else if (mg_match(hm->uri, mg_str("/api/wifi/config"), NULL)) {
+      handle_wifi_config(c, hm);
+    } else if (mg_match(hm->uri, mg_str("/api/wifi/enable"), NULL)) {
+      handle_wifi_enable(c, hm);
+    } else if (mg_match(hm->uri, mg_str("/api/wifi/disable"), NULL)) {
+      handle_wifi_disable(c, hm);
+    } else if (mg_match(hm->uri, mg_str("/api/wifi/band"), NULL)) {
+      handle_wifi_band(c, hm);
+    } else if (mg_match(hm->uri, mg_str("/api/wifi/clients"), NULL)) {
+      handle_wifi_clients(c, hm);
+    } else if (mg_match(hm->uri, mg_str("/api/wifi/blacklist"), NULL)) {
+      handle_wifi_blacklist(c, hm);
+    } else if (mg_match(hm->uri, mg_str("/api/wifi/whitelist"), NULL)) {
+      handle_wifi_whitelist(c, hm);
+    }
+    /* LED 控制 API */
+    else if (mg_match(hm->uri, mg_str("/api/led/status"), NULL)) {
+      handle_led_status(c, hm);
+    } else if (mg_match(hm->uri, mg_str("/api/led/control"), NULL)) {
+      handle_led_control(c, hm);
+    }
+    /* 恢复出厂 API */
+    else if (mg_match(hm->uri, mg_str("/api/factory-reset"), NULL)) {
+      handle_factory_reset(c, hm);
     }
     /* 未知 API 路由 */
     else {

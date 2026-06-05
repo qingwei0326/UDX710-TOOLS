@@ -3605,3 +3605,87 @@ void handle_security_factory_reset(struct mg_connection *c,
     HTTP_ERROR(c, 400, "答案不正确或未设置密保");
   }
 }
+
+/* ==================== WiFi Handlers (只读模式) ==================== */
+#include "wifi.h"
+
+static int check_method_safe(struct mg_connection *c, struct mg_http_message *hm, const char *method) {
+    if (hm->method.len == 7 && memcmp(hm->method.buf, "OPTIONS", 7) == 0) {
+        mg_http_reply(c, 200, "Access-Control-Allow-Origin: *\r\n"
+                              "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n"
+                              "Access-Control-Allow-Headers: Content-Type\r\n", "");
+        return 0;
+    }
+    size_t method_len = strlen(method);
+    if (hm->method.len != method_len || memcmp(hm->method.buf, method, method_len) != 0) {
+        mg_http_reply(c, 405, "Content-Type: application/json\r\n",
+                      "{\"error\":\"Method not allowed\"}");
+        return 0;
+    }
+    return 1;
+}
+
+static void send_json(struct mg_connection *c, int status, const char *json) {
+    mg_http_reply(c, status, "Content-Type: application/json\r\n", "%s", json);
+}
+
+void handle_wifi_status(struct mg_connection *c, struct mg_http_message *hm) {
+    if (!check_method_safe(c, hm, "GET")) return;
+    WifiConfig config;
+    memset(&config, 0, sizeof(config));
+    wifi_get_status(&config);
+    char json[1024];
+    snprintf(json, sizeof(json),
+        "{\"enabled\":%d,\"band\":\"%s\",\"ssid\":\"%s\","
+        "\"password\":\"%s\",\"channel\":%d,\"encryption\":\"%s\","
+        "\"max_clients\":%d}",
+        config.enabled, config.band, config.ssid, config.password,
+        config.channel, config.encryption, config.max_clients);
+    send_json(c, 200, json);
+}
+
+void handle_wifi_config(struct mg_connection *c, struct mg_http_message *hm) {
+    handle_wifi_status(c, hm);
+}
+
+void handle_wifi_enable(struct mg_connection *c, struct mg_http_message *hm) {
+    send_json(c, 200, "{\"status\":\"ok\",\"message\":\"WiFi由系统管理\"}");
+}
+
+void handle_wifi_disable(struct mg_connection *c, struct mg_http_message *hm) {
+    send_json(c, 200, "{\"status\":\"ok\",\"message\":\"WiFi由系统管理\"}");
+}
+
+void handle_wifi_band(struct mg_connection *c, struct mg_http_message *hm) {
+    send_json(c, 200, "{\"status\":\"ok\",\"message\":\"WiFi频段由系统管理\"}");
+}
+
+void handle_wifi_clients(struct mg_connection *c, struct mg_http_message *hm) {
+    if (!check_method_safe(c, hm, "GET")) return;
+    char output[4096] = {0};
+    run_command(output, sizeof(output), "sh", "-c",
+        "hostapd_cli -p /var/run/hostapd -i wlan1 all_sta 2>/dev/null | grep -E '^[0-9a-f]{2}:' | head -32", NULL);
+    char json[8192] = "{\"clients\":[";
+    char *line = strtok(output, "\n");
+    int first = 1;
+    while (line) {
+        if (strlen(line) > 10) {
+            if (!first) strcat(json, ",");
+            char entry[128];
+            snprintf(entry, sizeof(entry), "{\"mac\":\"%s\"}", line);
+            strcat(json, entry);
+            first = 0;
+        }
+        line = strtok(NULL, "\n");
+    }
+    strcat(json, "]}");
+    send_json(c, 200, json);
+}
+
+void handle_wifi_blacklist(struct mg_connection *c, struct mg_http_message *hm) {
+    send_json(c, 200, "{\"status\":\"ok\",\"message\":\"暂不支持\"}");
+}
+
+void handle_wifi_whitelist(struct mg_connection *c, struct mg_http_message *hm) {
+    send_json(c, 200, "{\"status\":\"ok\",\"message\":\"暂不支持\"}");
+}
