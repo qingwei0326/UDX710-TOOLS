@@ -115,6 +115,10 @@ int update_install(char *output, size_t size) {
         return -1;
     }
     
+    /* 重启server进程 - 后台执行，父进程返回成功 */
+    printf("[UPDATE] 安装完成，2秒后重启server...\n");
+    system("(sleep 2; kill -9 $(pidof server); cd /home/root/6677; ./server &) &");
+    
     return 0;
 }
 
