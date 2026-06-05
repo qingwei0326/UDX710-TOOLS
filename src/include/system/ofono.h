@@ -260,6 +260,20 @@ void ofono_stop_data_monitor(void);
  */
 int ofono_is_data_monitor_running(void);
 
+/**
+ * 设置数据连接自动恢复抑制标志
+ * 飞行模式开启期间应置位，使 data monitor 跳过自动恢复，
+ * 避免与飞行模式的 modem 离线操作互相打架
+ * @param suppressed 1 抑制自动恢复，0 恢复正常
+ */
+void ofono_set_data_restore_suppressed(int suppressed);
+
+/**
+ * 查询数据连接自动恢复是否被抑制
+ * @return 抑制中返回1，否则返回0
+ */
+int ofono_is_data_restore_suppressed(void);
+
 #ifdef __cplusplus
 }
 #endif

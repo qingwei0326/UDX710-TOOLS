@@ -23,6 +23,7 @@ static ApnConfig g_current_config = {0};
 static int create_apn_tables(void);
 static int load_apn_config(void);
 static int apply_apn_to_ofono(const ApnTemplate *tpl);
+static int seed_default_templates(void);
 
 /**
  * 创建APN数据库表
@@ -155,6 +156,57 @@ static int apply_apn_to_ofono(const ApnTemplate *tpl) {
 }
 
 /**
+ * 首次初始化时插入运营商预设APN模板
+ * 仅在 apn_templates 表为空时执行，不影响已有用户数据
+ */
+static int seed_default_templates(void) {
+    char output[32] = {0};
+    const char *count_sql = "SELECT COUNT(*) FROM apn_templates;";
+
+    pthread_mutex_lock(&g_apn_mutex);
+    int ret = db_query_string(count_sql, output, sizeof(output));
+    pthread_mutex_unlock(&g_apn_mutex);
+
+    /* 如果表里已有数据（含已插入的预设），跳过 */
+    if (ret == 0 && atoi(output) > 0) {
+        printf("[APN] 模板表已有 %d 条数据，跳过预设\n", atoi(output));
+        return 0;
+    }
+
+    printf("[APN] 首次初始化，插入运营商预设模板...\n");
+
+    /* 中国大陆运营商预设 */
+    static const char *presets[][6] = {
+        /* name,               apn,            protocol, username, password, auth_method */
+        {"中国移动",           "cmnet",        "ipv4",   "",       "",       "chap"},
+        {"中国移动(CMNET)",    "cmnet",        "dual",   "",       "",       "chap"},
+        {"中国移动(CMWAP)",    "cmwap",        "ipv4",   "",       "",       "chap"},
+        {"中国联通",           "3gnet",        "dual",   "",       "",       "chap"},
+        {"中国联通(3GNET)",    "3gnet",        "ipv4",   "",       "",       "chap"},
+        {"中国联通(WO)",       "wonet",        "dual",   "",       "",       "chap"},
+        {"中国电信",           "ctnet",        "dual",   "",       "",       "chap"},
+        {"中国电信(CTNET)",    "ctnet",        "ipv4",   "",       "",       "chap"},
+        {"中国电信(CTWAP)",    "ctwap",        "ipv4",   "",       "",       "chap"},
+        {"中国广电",           "cbnet",        "dual",   "",       "",       "chap"},
+        {"物联网-CMIOT",       "CMIOT",        "ipv4",   "",       "",       "chap"},
+        {"物联网-CUOIOT",      "cuo.iot",      "ipv4",   "",       "",       "chap"},
+        {"物联网-CTOIOT",      "cto.iot",      "ipv4",   "",       "",       "chap"},
+        {NULL, NULL, NULL, NULL, NULL, NULL}
+    };
+
+    int count = 0;
+    for (int i = 0; presets[i][0] != NULL; i++) {
+        if (apn_template_create(presets[i][0], presets[i][1], presets[i][2],
+                                presets[i][3], presets[i][4], presets[i][5]) == 0) {
+            count++;
+        }
+    }
+
+    printf("[APN] 预设模板插入完成: %d 条\n", count);
+    return count > 0 ? 0 : -1;
+}
+
+/**
  * 初始化APN模块
  */
 int apn_init(const char *db_path) {
@@ -174,7 +226,10 @@ int apn_init(const char *db_path) {
         printf("[APN] 创建数据库表失败\n");
         return -1;
     }
-    
+
+    /* 首次初始化时插入运营商预设模板 */
+    seed_default_templates();
+
     /* 加载配置 */
     load_apn_config();
     

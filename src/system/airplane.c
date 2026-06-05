@@ -83,14 +83,29 @@ int get_airplane_mode(void) {
 int set_airplane_mode(int enabled) {
     char slot[16], ril_path[32];
     int online = enabled ? 0 : 1;  /* 飞行模式开启=离线, 关闭=在线 */
-    
+    int rc;
+
     /* 获取当前 RIL 路径 */
     if (get_current_slot(slot, ril_path) != 0 || strcmp(ril_path, "unknown") == 0) {
         strcpy(ril_path, "/ril_0");  /* 默认使用 ril_0 */
     }
-    
-    /* 使用 ofono D-Bus 接口设置 modem 在线状态 */
-    return ofono_modem_set_online(ril_path, online, OFONO_TIMEOUT_MS);
+
+    if (enabled) {
+        /* 开启飞行模式：先抑制 data monitor 自动恢复，再离线，
+         * 否则离线触发的断开信号会让 monitor 立刻尝试重连，与飞行模式打架 */
+        ofono_set_data_restore_suppressed(1);
+        rc = ofono_modem_set_online(ril_path, online, OFONO_TIMEOUT_MS);
+        if (rc != 0) {
+            /* 设置失败则解除抑制，避免卡死在抑制态 */
+            ofono_set_data_restore_suppressed(0);
+        }
+    } else {
+        /* 关闭飞行模式：先在线，再解除抑制让 monitor 恢复数据连接 */
+        rc = ofono_modem_set_online(ril_path, online, OFONO_TIMEOUT_MS);
+        ofono_set_data_restore_suppressed(0);
+    }
+
+    return rc;
 }
 
 int get_iccid(char *iccid, size_t size) {

@@ -1472,6 +1472,12 @@ int ofono_check_and_restore_data(char *result, int size) {
     return -1;
   }
 
+  /* 飞行模式期间抑制自动恢复，避免与离线操作打架 */
+  if (g_restore_suppressed) {
+    snprintf(result, size, "飞行模式中，跳过数据恢复");
+    return 0;
+  }
+
   /* 1. 检查网络注册状态 */
   if (ofono_get_network_status(net_status, sizeof(net_status)) != 0) {
     snprintf(result, size, "无法获取网络状态");
@@ -1645,6 +1651,21 @@ static volatile int g_data_monitor_running = 0;
 static GDBusConnection *g_monitor_dbus_conn = NULL;
 static guint g_restore_timeout_id = 0; /* 延迟恢复定时器 ID */
 
+/* 飞行模式抑制标志：开启飞行模式时置位，data monitor 跳过自动恢复，
+ * 避免与飞行模式的 modem 离线操作互相打架（详见 ofono_set_data_restore_suppressed）*/
+static volatile int g_restore_suppressed = 0;
+
+void ofono_set_data_restore_suppressed(int suppressed) {
+  g_restore_suppressed = suppressed ? 1 : 0;
+  /* 抑制时取消已挂起的延迟恢复定时器 */
+  if (g_restore_suppressed && g_restore_timeout_id > 0) {
+    g_source_remove(g_restore_timeout_id);
+    g_restore_timeout_id = 0;
+  }
+}
+
+int ofono_is_data_restore_suppressed(void) { return g_restore_suppressed ? 1 : 0; }
+
 /* 前向声明 */
 static void subscribe_data_monitor_signals(void);
 static void unsubscribe_data_monitor_signals(void);
@@ -1701,16 +1722,21 @@ static void on_context_property_changed(
            active ? "true" : "false");
 
     if (!active) {
-      /* 数据连接断开，使用 g_timeout_add 延迟恢复（非阻塞） */
-      printf("[DataMonitor] 数据连接断开，2秒后尝试恢复...\n");
+      /* 飞行模式期间主动离线，不要尝试恢复 */
+      if (g_restore_suppressed) {
+        printf("[DataMonitor] 数据连接断开（飞行模式中），不恢复\n");
+      } else {
+        /* 数据连接断开，使用 g_timeout_add 延迟恢复（非阻塞） */
+        printf("[DataMonitor] 数据连接断开，2秒后尝试恢复...\n");
 
-      /* 取消之前的定时器（如果有） */
-      if (g_restore_timeout_id > 0) {
-        g_source_remove(g_restore_timeout_id);
+        /* 取消之前的定时器（如果有） */
+        if (g_restore_timeout_id > 0) {
+          g_source_remove(g_restore_timeout_id);
+        }
+
+        /* 2秒后尝试恢复 */
+        g_restore_timeout_id = g_timeout_add(2000, delayed_restore_data, NULL);
       }
-
-      /* 2秒后尝试恢复 */
-      g_restore_timeout_id = g_timeout_add(2000, delayed_restore_data, NULL);
     }
   }
 

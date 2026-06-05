@@ -80,6 +80,45 @@ int set_network_mode_for_slot(const char *mode, const char *slot) {
 
 extern int ofono_is_initialized(void);
 
+/* SIM 卡槽切换的可靠方式：写配置文件 + reboot
+ * 这台破解机上 oFono SetDataCard 不可靠（原厂固件用 stoneoim-service + GPIO 控制），
+ * 只有改 sim_config + reboot 才能真正生效。
+ * 路径: /var/stoneoim/sim_config.conf
+ * 格式: [global]\nsim_slot=0  (0=物理SIM, 1=eSIM)           */
+#define SIM_CONFIG_PATH "/var/stoneoim/sim_config.conf"
+
+static int switch_slot_via_config(const char *target_ril) {
+    int sim_slot;
+    if (strcmp(target_ril, "/ril_0") == 0) {
+        sim_slot = 0;
+    } else {
+        sim_slot = 1;
+    }
+
+    /* 写 sim_config.conf */
+    FILE *fp = fopen(SIM_CONFIG_PATH, "w");
+    if (!fp) {
+        printf("[Modem] 无法写入 %s\n", SIM_CONFIG_PATH);
+        return -1;
+    }
+    fprintf(fp, "[global]\nsim_slot=%d\n", sim_slot);
+    fclose(fp);
+    printf("[Modem] 已写入 %s (sim_slot=%d)\n", SIM_CONFIG_PATH, sim_slot);
+
+    /* fork 子进程执行 reboot，主进程继续返回（保证 HTTP 响应能发出去） */
+    pid_t pid = fork();
+    if (pid == 0) {
+        /* 子进程：等 500ms 让父进程发完 HTTP 响应，再落盘+重启 */
+        usleep(500 * 1000);
+        sync();
+        usleep(200 * 1000);
+        execl("/sbin/reboot", "reboot", NULL);
+        _exit(127);
+    }
+
+    return 0;
+}
+
 int switch_slot(const char *slot) {
     char target_ril[16], other_ril[16];
     char new_slot[16], new_ril[32];
@@ -106,9 +145,10 @@ int switch_slot(const char *slot) {
     /* 步骤3: 设置目标 ril 在线状态为 1 (开启) */
     ofono_modem_set_online(target_ril, 1, OFONO_TIMEOUT_MS);
 
-    /* 步骤4: 设置数据卡为目标 ril */
+    /* 步骤4: 设置数据卡为目标 ril (ofono_set_datacard 返回1=成功,0=失败) */
     if (ofono_set_datacard(target_ril) == 0) {
-        return -1;
+        printf("[Modem] SetDataCard 失败，回退到 sim_config + reboot\n");
+        return switch_slot_via_config(target_ril);
     }
 
     /* 等待系统状态更新 */
@@ -119,7 +159,8 @@ int switch_slot(const char *slot) {
 
     /* 验证切换结果 */
     if (get_current_slot(new_slot, new_ril) != 0) {
-        return -1;
+        printf("[Modem] 切换验证失败，回退到 sim_config + reboot\n");
+        return switch_slot_via_config(target_ril);
     }
 
     /* 步骤6: 重启数据连接监听（切换到新卡槽） */

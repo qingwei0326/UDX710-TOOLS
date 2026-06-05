@@ -554,6 +554,16 @@ void handle_netif_stats(struct mg_connection *c, struct mg_http_message *hm) {
     HTTP_ERROR(c, 503, "监听正在重启中，请稍后再试");
     return;
   }
+  if (ret == -1) {
+    /* 监听尚未启动：自动开启监听并持久化，让下次请求即可拿到数据，
+     * 而不是直接报错 */
+    if (netif_set_monitor(ifname, 1) == 0) {
+      HTTP_ERROR(c, 503, "监听已自动启动，请稍后再试");
+    } else {
+      HTTP_ERROR(c, 500, "启动流量监听失败");
+    }
+    return;
+  }
   if (ret != 0) {
     HTTP_ERROR(c, 500, "获取流量统计失败");
     return;

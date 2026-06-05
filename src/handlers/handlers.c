@@ -16,6 +16,8 @@
 #include "sysinfo.h"
 #include <dirent.h>
 #include <glib.h>
+#include <pthread.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -189,17 +191,32 @@ void handle_switch(struct mg_connection *c, struct mg_http_message *hm) {
   json_obj_open(j);
   if (switch_slot(slot) == 0) {
     json_add_str(j, "status", "success");
-    char msg[64];
-    snprintf(msg, sizeof(msg), "Slot switched to %s successfully", slot);
+    char msg[128];
+    snprintf(msg, sizeof(msg), "Slot switched to %s, device will reboot", slot);
     json_add_str(j, "message", msg);
   } else {
     json_add_str(j, "status", "error");
-    char msg[64];
+    char msg[128];
     snprintf(msg, sizeof(msg), "Failed to switch slot to %s", slot);
     json_add_str(j, "message", msg);
   }
   json_obj_close(j);
   HTTP_OK_FREE(c, json_finish(j));
+}
+
+/* 飞行模式后台执行：set_airplane_mode 内部的 D-Bus 调用可能阻塞最长 30 秒，
+ * 若在主事件循环线程同步执行会卡死 mongoose poll 导致 HTTP 全部断连。
+ * 故放到 detached 线程执行，主线程立即返回响应。 */
+static pthread_mutex_t g_airplane_lock = PTHREAD_MUTEX_INITIALIZER;
+static volatile int g_airplane_busy = 0;
+
+static void *airplane_worker(void *arg) {
+  int enabled = (int)(intptr_t)arg;
+  set_airplane_mode(enabled);
+  pthread_mutex_lock(&g_airplane_lock);
+  g_airplane_busy = 0;
+  pthread_mutex_unlock(&g_airplane_lock);
+  return NULL;
 }
 
 /* POST /api/airplane_mode - 飞行模式控制 */
@@ -217,11 +234,29 @@ void handle_airplane_mode(struct mg_connection *c, struct mg_http_message *hm) {
     return;
   }
 
-  if (set_airplane_mode(enabled) == 0) {
-    HTTP_SUCCESS(c, "Airplane mode updated successfully");
-  } else {
-    HTTP_ERROR(c, 500, "Failed to set airplane mode: AT command failed");
+  /* 防止并发飞行模式操作叠加 */
+  pthread_mutex_lock(&g_airplane_lock);
+  if (g_airplane_busy) {
+    pthread_mutex_unlock(&g_airplane_lock);
+    HTTP_ERROR(c, 429, "Airplane mode switch in progress, please wait");
+    return;
   }
+  g_airplane_busy = 1;
+  pthread_mutex_unlock(&g_airplane_lock);
+
+  pthread_t tid;
+  if (pthread_create(&tid, NULL, airplane_worker,
+                     (void *)(intptr_t)enabled) != 0) {
+    pthread_mutex_lock(&g_airplane_lock);
+    g_airplane_busy = 0;
+    pthread_mutex_unlock(&g_airplane_lock);
+    HTTP_ERROR(c, 500, "Failed to start airplane mode worker");
+    return;
+  }
+  pthread_detach(tid);
+
+  /* 立即返回，实际切换在后台进行 */
+  HTTP_SUCCESS(c, "Airplane mode switch started");
 }
 
 /* POST /api/device_control - 设备控制 */
