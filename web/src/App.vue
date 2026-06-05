@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { ref, provide, onMounted, onUnmounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import SystemMonitor from './components/SystemMonitor.vue'
@@ -15,7 +15,6 @@ import UsbMode from './components/UsbMode.vue'
 import ApnConfig from './components/ApnConfig.vue'
 import PluginStore from './components/PluginStore.vue'
 import NetworkInterface from './components/NetworkInterface.vue'
-import RatholeManager from './components/RatholeManager.vue'
 import IPv6Proxy from './components/IPv6Proxy.vue'
 import GlobalToast from './components/GlobalToast.vue'
 import GlobalConfirm from './components/GlobalConfirm.vue'
@@ -271,7 +270,6 @@ const allMenuItems = [
   { id: 'sms', labelKey: 'menu.sms', icon: 'fa-envelope', color: 'from-emerald-500 to-teal-400' },
   { id: 'traffic', labelKey: 'menu.traffic', icon: 'fa-chart-area', color: 'from-green-500 to-emerald-400' },
   { id: 'battery', labelKey: 'menu.battery', icon: 'fa-battery-half', color: 'from-yellow-500 to-amber-400' },
-  { id: 'rathole', labelKey: 'menu.rathole', icon: 'fa-shield-alt', color: 'from-indigo-500 to-violet-400' },
   { id: 'ipv6proxy', labelKey: 'menu.ipv6proxy', icon: 'fa-network-wired', color: 'from-cyan-500 to-blue-400' },
   { id: 'update', labelKey: 'menu.update', icon: 'fa-cloud-download-alt', color: 'from-violet-500 to-purple-400' },
   { id: 'at', labelKey: 'menu.at', icon: 'fa-terminal', color: 'from-cyan-500 to-teal-400' },
@@ -697,7 +695,6 @@ onUnmounted(() => {
           <SmsManager v-else-if="activeMenu === 'sms'" key="sms" />
           <TrafficStats v-else-if="activeMenu === 'traffic'" key="traffic" />
           <BatteryManager v-else-if="activeMenu === 'battery'" key="battery" />
-          <RatholeManager v-else-if="activeMenu === 'rathole'" key="rathole" />
           <IPv6Proxy v-else-if="activeMenu === 'ipv6proxy'" key="ipv6proxy" />
           <SystemUpdate v-else-if="activeMenu === 'update'" key="update" />
           <ATDebug v-else-if="activeMenu === 'at'" key="at" />
