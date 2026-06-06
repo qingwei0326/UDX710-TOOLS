@@ -575,8 +575,8 @@ int ofono_network_get_signal_strength(const char *modem_path, int *strength,
     g_variant_unref(props);
   }
 
-  // 如果没有获取到 StrengthDbm，则使用 Strength 计算
-  if (ret == 0 && dbm && !got_dbm && strength) {
+  // 如果没有获取到 StrengthDbm 或值为0(无效)，则使用 Strength 计算
+  if (ret == 0 && dbm && strength && (!got_dbm || *dbm == 0)) {
     *dbm = -113 + 2 * (*strength);
   }
 
