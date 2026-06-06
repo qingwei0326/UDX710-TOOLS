@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file modem.c
  * @brief Modem control (Go: system/modem.go)
  */
@@ -62,10 +62,11 @@ int set_network_mode_for_slot(const char *mode, const char *slot) {
             return -1;
         }
     } else {
+        /* slot1=外部SIM=ril_1, slot2=eSIM=ril_0 */
         if (strcmp(slot, "slot1") == 0) {
-            strcpy(ril_path, "/ril_0");
-        } else if (strcmp(slot, "slot2") == 0) {
             strcpy(ril_path, "/ril_1");
+        } else if (strcmp(slot, "slot2") == 0) {
+            strcpy(ril_path, "/ril_0");
         } else {
             return -1;
         }
@@ -85,30 +86,50 @@ extern int ofono_is_initialized(void);
  * 只有改 sim_config + reboot 才能真正生效。
  * 路径: /var/stoneoim/sim_config.conf
  * 格式: [global]\nsim_slot=0  (0=物理SIM, 1=eSIM)           */
-#define SIM_CONFIG_PATH "/var/stoneoim/sim_config.conf"
+#define SIM_CONFIG_PATH "/etc/ril/system.ini"
 
 static int switch_slot_via_config(const char *target_ril) {
-    int sim_slot;
-    if (strcmp(target_ril, "/ril_0") == 0) {
-        sim_slot = 0;
+    /*
+     * 可靠的 SIM 卡槽切换：修改 /etc/ril/system.ini 的 persist.radio.card.setting
+     * slot1 (外部SIM) = ril_1 = card.setting=1
+     * slot2 (eSIM)    = ril_0 = card.setting=0
+     *
+     * 读取原文件，替换 card.setting 行，写回，然后 reboot。
+     */
+    int card_setting;
+    if (strcmp(target_ril, "/ril_1") == 0) {
+        card_setting = 1;  /* 外部 SIM */
     } else {
-        sim_slot = 1;
+        card_setting = 0;  /* eSIM */
     }
 
-    /* 写 sim_config.conf */
-    FILE *fp = fopen(SIM_CONFIG_PATH, "w");
-    if (!fp) {
-        printf("[Modem] 无法写入 %s\n", SIM_CONFIG_PATH);
-        return -1;
-    }
-    fprintf(fp, "[global]\nsim_slot=%d\n", sim_slot);
-    fclose(fp);
-    printf("[Modem] 已写入 %s (sim_slot=%d)\n", SIM_CONFIG_PATH, sim_slot);
+    /* remount root 为可写 */
+    system("mount -o remount,rw /");
 
-    /* fork 子进程执行 reboot，主进程继续返回（保证 HTTP 响应能发出去） */
+    /* 用 busybox sed 替换 card.setting 行（避免 \r\r\n 问题） */
+    char cmd[512];
+    snprintf(cmd, sizeof(cmd),
+        "/home/root/busybox-aarch64 sed -i "
+        "'s/^persist\.radio\.card\.setting=.*/persist.radio.card.setting=%d/' "
+        "%s",
+        card_setting, SIM_CONFIG_PATH);
+    int rc = system(cmd);
+    if (rc != 0) {
+        /* sed 失败，可能文件里没有这行，追加 */
+        snprintf(cmd, sizeof(cmd),
+            "echo 'persist.radio.card.setting=%d' >> %s",
+            card_setting, SIM_CONFIG_PATH);
+        system(cmd);
+    }
+
+    printf("[Modem] 已设置 card.setting=%d (target=%s)\n", card_setting, target_ril);
+
+    /* remount 回只读 */
+    system("mount -o remount,ro /");
+
+    /* fork 子进程执行 reboot */
     pid_t pid = fork();
     if (pid == 0) {
-        /* 子进程：等 500ms 让父进程发完 HTTP 响应，再落盘+重启 */
         usleep(500 * 1000);
         sync();
         usleep(200 * 1000);
@@ -127,12 +148,13 @@ int switch_slot(const char *slot) {
         return -1;
     }
 
+    /* slot1=外部SIM=ril_1, slot2=eSIM=ril_0 */
     if (strcmp(slot, "slot1") == 0) {
-        strcpy(target_ril, "/ril_0");
-        strcpy(other_ril, "/ril_1");
-    } else {
         strcpy(target_ril, "/ril_1");
         strcpy(other_ril, "/ril_0");
+    } else {
+        strcpy(target_ril, "/ril_0");
+        strcpy(other_ril, "/ril_1");
     }
 
     /* 步骤1: 把当前卡槽设置为 LTE only (mode=5) */
